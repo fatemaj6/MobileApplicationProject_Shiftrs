@@ -40,10 +40,9 @@ Log daily care notes (meals, mood, blood pressure, sleep). Generate care summary
 
 ---
 
-## 🗂️ Project Structure
+## 📁 Project Structure
 
-CareConnect uses a feature-based layered Flutter folder structure:
-
+```
 lib/
 ├── main.dart
 ├── core/
@@ -68,6 +67,8 @@ lib/
     ├── care_notes/       # Daily care notes
     ├── reports/          # Care reports & charts
     └── notifications/    # Reminders & alerts
+```
+
 ---
 
 ## 🚀 Getting Started

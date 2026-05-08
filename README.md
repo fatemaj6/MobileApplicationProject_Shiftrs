@@ -46,30 +46,28 @@ CareConnect uses a feature-based layered Flutter folder structure:
 
 lib/
 ├── main.dart
-│
-├── 🎨 core/
+├── core/
 │   ├── constants/        # App colors, text styles, spacing
 │   ├── theme/            # App-wide theme configuration
 │   ├── routes/           # Named route definitions
 │   ├── utils/            # Validators and helper functions
 │   └── widgets/          # Reusable UI components
 │
-├── 🗄️ data/
-│   ├── models/           # Shared models e.g. UserModel, MedicationModel
+├── data/
+│   ├── models/           # Shared models (UserModel, MedicationModel)
 │   ├── repositories/     # Shared app-level data logic
-│   └── services/         # Firebase Auth and Firestore service functions
+│   └── services/         # Firebase Auth & Firestore services
 │
-└── ⚙️ features/
-├── onboarding/        # Welcome and role selection screens
-├── auth/              # Login and forgot password
-├── caregiver/         # Caregiver home dashboard
-├── family/            # Family member monitoring dashboard
-├── medications/       # Medication tracker and management
-├── appointments/      # Appointment scheduling and calendar sync
-├── care_notes/        # Daily care notes logging
-├── reports/           # Care summary reports and charts
-└── notifications/     # Reminders and alerts
-
+└── features/
+    ├── onboarding/       # Welcome & role selection
+    ├── auth/             # Login & forgot password
+    ├── caregiver/        # Caregiver dashboard
+    ├── family/           # Family monitoring dashboard
+    ├── medications/      # Medication tracking
+    ├── appointments/     # Scheduling & calendar sync
+    ├── care_notes/       # Daily care notes
+    ├── reports/          # Care reports & charts
+    └── notifications/    # Reminders & alerts
 ---
 
 ## 🚀 Getting Started

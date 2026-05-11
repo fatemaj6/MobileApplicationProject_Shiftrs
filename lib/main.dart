@@ -27,6 +27,9 @@ class CareConnectApp extends StatelessWidget {
       routes: {
         AppRoutes.roleSelection: (ctx) => const RoleSelectionScreen(),
         AppRoutes.register:      (ctx) => const RegisterScreen(),
+        AppRoutes.login:         (ctx) => const Scaffold(
+          body: Center(child: Text('Login — Coming Next')),
+        ),
       },
     );
   }

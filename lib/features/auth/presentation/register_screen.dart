@@ -4,6 +4,9 @@ import '../../../core/constants/app_radius.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
+import '../../../data/services/auth_service.dart';
+import '../../../data/repositories/user_repository.dart';
+import '../../../core/routes/app_routes.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -13,11 +16,14 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _formKey                  = GlobalKey<FormState>();
+  final _nameController           = TextEditingController();
+  final _emailController          = TextEditingController();
+  final _passwordController       = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _authService              = AuthService();
+  final _userRepository           = UserRepository();
+
   bool _isLoading = false;
   String? _errorMessage;
   late String _role;
@@ -36,10 +42,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _errorMessage = null;
     });
 
-    // Firebase registration will go here in next step
-    await Future.delayed(const Duration(seconds: 1)); // placeholder
+    // Step 1 — create Firebase Auth account
+    final error = await _authService.register(
+      _emailController.text,
+      _passwordController.text,
+    );
 
+    if (error != null) {
+      setState(() {
+        _errorMessage = error;
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // Step 2 — save user to Firestore
+    final uid = _authService.currentUser!.uid;
+    await _userRepository.createUser(
+      uid:   uid,
+      name:  _nameController.text.trim(),
+      email: _emailController.text.trim(),
+      role:  _role,
+    );
+
+    if (!mounted) return;
     setState(() => _isLoading = false);
+
+    // Step 3 — navigate to login
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRoutes.login,
+      (route) => false,
+    );
   }
 
   @override
@@ -109,9 +143,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 24),
 
                 // Title
-                Text(
+                const Text(
                   'Create Account',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
                     color: AppColors.foreground,
@@ -216,7 +250,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             style: TextStyle(color: AppColors.textSecondary),
                           ),
                           TextButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              AppRoutes.login,
+                              (route) => false,
+                            ),
                             child: Text(
                               'Sign In',
                               style: TextStyle(

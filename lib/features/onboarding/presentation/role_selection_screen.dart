@@ -9,7 +9,6 @@ class RoleSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -27,7 +26,6 @@ class RoleSelectionScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Title
                       Text(
                         'Choose Your Role',
                         style: TextStyle(
@@ -47,15 +45,12 @@ class RoleSelectionScreen extends StatelessWidget {
                         textAlign: TextAlign.center,
                       ),
                       SizedBox(height: 40),
-
-                      // Role cards
                       _RoleCard(
                         role: 'caregiver',
                         title: 'Caregiver',
                         description:
                             'I provide hands-on daily care and need to manage medications, log activities, and track appointments',
                         iconColor: AppColors.primary,
-                        iconBgColor: AppColors.cyanLight,
                         icon: Icons.favorite,
                       ),
                       SizedBox(height: 16),
@@ -65,14 +60,11 @@ class RoleSelectionScreen extends StatelessWidget {
                         description:
                             'I monitor care remotely and want to stay updated on my loved one\'s health and well-being',
                         iconColor: AppColors.purple,
-                        iconBgColor: AppColors.purpleBg,
                         icon: Icons.visibility,
                       ),
                     ],
                   ),
                 ),
-
-                // Back button
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text(
@@ -98,7 +90,6 @@ class _RoleCard extends StatelessWidget {
   final String title;
   final String description;
   final Color iconColor;
-  final Color iconBgColor;
   final IconData icon;
 
   const _RoleCard({
@@ -106,7 +97,6 @@ class _RoleCard extends StatelessWidget {
     required this.title,
     required this.description,
     required this.iconColor,
-    required this.iconBgColor,
     required this.icon,
   });
 
@@ -116,7 +106,7 @@ class _RoleCard extends StatelessWidget {
       onTap: () {
         Navigator.pushNamed(
           context,
-          AppRoutes.login,
+          AppRoutes.register,
           arguments: role,
         );
       },
@@ -131,7 +121,6 @@ class _RoleCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Icon container
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -148,8 +137,6 @@ class _RoleCard extends StatelessWidget {
               child: Icon(icon, color: Colors.white, size: 32),
             ),
             const SizedBox(width: 16),
-
-            // Text
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

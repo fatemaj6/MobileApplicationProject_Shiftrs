@@ -1,9 +1,9 @@
 class AppRoutes {
   AppRoutes._();
 
-  static const String welcome         = '/welcome';
   static const String roleSelection   = '/role-selection';
   static const String login           = '/login';
+  static const String register        = '/register';
 
   // Caregiver
   static const String caregiverHome   = '/caregiver/home';

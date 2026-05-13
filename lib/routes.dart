@@ -6,6 +6,7 @@ import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/profile/screens/profile_screen.dart';
 import 'features/home/screens/home_screen.dart';
+import 'features/auth/screens/reset_password_screen.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
   AppRoutes.welcome:       (ctx) => const WelcomeScreen(),
@@ -14,4 +15,5 @@ final Map<String, WidgetBuilder> appRoutes = {
   AppRoutes.login:         (ctx) => const LoginScreen(),
   AppRoutes.caregiverHome: (ctx) => const HomeScreen(),
   AppRoutes.profile:       (ctx) => const ProfileScreen(),
+  AppRoutes.resetPassword: (context) => const ResetPasswordScreen(),
 };

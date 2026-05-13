@@ -21,4 +21,5 @@ class AppRoutes {
   static const String notifications   = '/notifications';
   static const String reports         = '/reports';
   static const String aiAssistant     = '/ai-assistant';
+  static const String profile         = '/profile';
 }

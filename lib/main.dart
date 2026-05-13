@@ -1,8 +1,26 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() {
-  runApp(const CareConnectApp());
+import 'package:provider/provider.dart';
+import 'data/repositories/profile_repository.dart';
+import 'routes.dart';
+import 'core/routes/app_routes.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider<ProfileRepository>(create: (_) => ProfileRepository()),
+      ],
+      child: const CareConnectApp(),
+    ),
+  );
 }
 
 class CareConnectApp extends StatelessWidget {
@@ -14,9 +32,8 @@ class CareConnectApp extends StatelessWidget {
       title: 'CareConnect',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const Scaffold(
-        body: Center(child: Text('CareConnect')),
-      ),
+      initialRoute: AppRoutes.welcome,
+      routes: appRoutes,
     );
   }
 }

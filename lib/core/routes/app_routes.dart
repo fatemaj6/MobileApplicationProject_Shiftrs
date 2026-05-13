@@ -12,6 +12,7 @@ class AppRoutes {
   static const String caregiverHome  = '/caregiver/home';
   static const String medications    = '/caregiver/medications';
   static const String addMedication  = '/caregiver/add-medication';
+  static const String editMedication = '/caregiver/edit-medication';
   static const String appointments   = '/caregiver/appointments';
   static const String careNotes      = '/caregiver/care-notes';
   static const String addCareNote    = '/caregiver/add-note';

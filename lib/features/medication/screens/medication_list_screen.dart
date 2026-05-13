@@ -1,4 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+import '../../../core/routes/app_routes.dart';
 import '../../../data/model/medication_model.dart';
 import '../controllers/medication_controller.dart';
 import '../widgets/medication_card.dart';
@@ -8,15 +11,7 @@ import 'edit_medication_screen.dart';
 /// Main medication screen — shows all medications grouped by status.
 /// Uses StreamBuilder so the list updates in real time from Firestore.
 class MedicationListScreen extends StatefulWidget {
-  // TODO: Replace hardcoded IDs with values from your auth/session system.
-  final String patientId;
-  final String caregiverId;
-
-  const MedicationListScreen({
-    super.key,
-    this.patientId = 'patient_001',
-    this.caregiverId = 'caregiver_001',
-  });
+  const MedicationListScreen({super.key});
 
   @override
   State<MedicationListScreen> createState() => _MedicationListScreenState();
@@ -25,7 +20,7 @@ class MedicationListScreen extends StatefulWidget {
 class _MedicationListScreenState extends State<MedicationListScreen> {
   final MedicationController _controller = MedicationController();
 
-  // ─── Snackbar helper ──────────────────────────────────────────────────────
+  String? get _currentUserId => FirebaseAuth.instance.currentUser?.uid;
 
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -34,23 +29,20 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
         backgroundColor:
             isError ? const Color(0xFFEF4444) : const Color(0xFF16A34A),
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
-  // ─── Navigation ───────────────────────────────────────────────────────────
-
-  void _goToAddMedication() {
+  void _goToAddMedication(String currentUserId) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => AddMedicationScreen(
-          patientId: widget.patientId,
-          caregiverId: widget.caregiverId,
+          patientId: currentUserId,
+          caregiverId: currentUserId,
         ),
       ),
     );
@@ -65,22 +57,33 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
     );
   }
 
-  // ─── Build ────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
+    final currentUserId = _currentUserId;
+
+    if (currentUserId == null) {
+      return Scaffold(
+        body: Center(
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.pushReplacementNamed(context, AppRoutes.login);
+            },
+            child: const Text('Back to Login'),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       body: SafeArea(
         child: StreamBuilder<List<MedicationModel>>(
-          stream: _controller.getMedicationsStream(widget.patientId),
+          stream: _controller.getMedicationsStream(currentUserId),
           builder: (context, snapshot) {
-            // Loading state
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            // Error state
             if (snapshot.hasError) {
               return Center(
                 child: Text('Error: ${snapshot.error}'),
@@ -89,18 +92,12 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
 
             final medications = snapshot.data ?? [];
 
-            // Group by status
-            final pending = medications
-                .where((m) => m.status == 'pending')
-                .toList();
-            final given =
-                medications.where((m) => m.status == 'given').toList();
-            final missed =
-                medications.where((m) => m.status == 'missed').toList();
+            final pending = medications.where((m) => m.status == 'pending').toList();
+            final given = medications.where((m) => m.status == 'given').toList();
+            final missed = medications.where((m) => m.status == 'missed').toList();
 
             return CustomScrollView(
               slivers: [
-                // ── App bar ──
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -125,14 +122,16 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // ── Add New Medication button ──
                         SizedBox(
                           width: double.infinity,
                           height: 52,
                           child: ElevatedButton.icon(
-                            onPressed: _goToAddMedication,
-                            icon: const Icon(Icons.add,
-                                color: Colors.white, size: 20),
+                            onPressed: () => _goToAddMedication(currentUserId),
+                            icon: const Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                             label: const Text(
                               '+ Add New Medication',
                               style: TextStyle(
@@ -156,7 +155,6 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
                   ),
                 ),
 
-                // ── Empty state ──
                 if (medications.isEmpty)
                   SliverFillRemaining(
                     child: _buildEmptyState(),
@@ -166,30 +164,24 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                        // Pending section
                         _buildSection(
                           title: 'Pending',
                           count: pending.length,
                           countColor: const Color(0xFF64748B),
                           medications: pending,
                         ),
-
-                        // Given section
                         _buildSection(
                           title: 'Given',
                           count: given.length,
                           countColor: const Color(0xFF16A34A),
                           medications: given,
                         ),
-
-                        // Missed section
                         _buildSection(
                           title: 'Missed',
                           count: missed.length,
                           countColor: const Color(0xFFDC2626),
                           medications: missed,
                         ),
-
                         const SizedBox(height: 24),
                       ]),
                     ),
@@ -202,8 +194,6 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
     );
   }
 
-  // ─── Section header + cards ───────────────────────────────────────────────
-
   Widget _buildSection({
     required String title,
     required int count,
@@ -213,7 +203,6 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section header
         Row(
           children: [
             Text(
@@ -226,8 +215,7 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
             ),
             const SizedBox(width: 8),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: countColor.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(20),
@@ -245,54 +233,58 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
         ),
         const SizedBox(height: 10),
 
-        // Cards
         if (medications.isEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
               'No $title medications.',
               style: const TextStyle(
-                  fontSize: 13, color: Color(0xFF94A3B8)),
+                fontSize: 13,
+                color: Color(0xFF94A3B8),
+              ),
             ),
           )
         else
-          ...medications.map((med) => MedicationCard(
-                medication: med,
-                onMarkGiven: () async {
-                  final ok = await _controller.markAsGiven(med.id);
-                  if (ok) {
-                    _showSnackBar('Medication marked as given.');
-                  }
-                },
-                onMarkMissed: () async {
-                  final ok = await _controller.markAsMissed(med.id);
-                  if (ok) {
-                    _showSnackBar('Medication marked as missed.');
-                  }
-                },
-                onEdit: () => _goToEditMedication(med),
-                onDelete: () async {
-                  final ok = await _controller.deleteMedication(med.id);
-                  if (ok) {
-                    _showSnackBar('Medication deleted successfully.');
-                  }
-                },
-              )),
+          ...medications.map(
+            (med) => MedicationCard(
+              medication: med,
+              onMarkGiven: () async {
+                final ok = await _controller.markAsGiven(med.id);
+                if (ok) {
+                  _showSnackBar('Medication marked as given.');
+                }
+              },
+              onMarkMissed: () async {
+                final ok = await _controller.markAsMissed(med.id);
+                if (ok) {
+                  _showSnackBar('Medication marked as missed.');
+                }
+              },
+              onEdit: () => _goToEditMedication(med),
+              onDelete: () async {
+                final ok = await _controller.deleteMedication(med.id);
+                if (ok) {
+                  _showSnackBar('Medication deleted successfully.');
+                }
+              },
+            ),
+          ),
 
         const SizedBox(height: 16),
       ],
     );
   }
 
-  // ─── Empty state ──────────────────────────────────────────────────────────
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.medication_outlined,
-              size: 64, color: Colors.grey[300]),
+          Icon(
+            Icons.medication_outlined,
+            size: 64,
+            color: Colors.grey[300],
+          ),
           const SizedBox(height: 16),
           const Text(
             'No medications added yet.',
@@ -305,7 +297,10 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
           const SizedBox(height: 8),
           const Text(
             'Tap Add New Medication to create one.',
-            style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+            style: TextStyle(
+              fontSize: 13,
+              color: Color(0xFF94A3B8),
+            ),
           ),
         ],
       ),

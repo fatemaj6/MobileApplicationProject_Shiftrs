@@ -16,13 +16,13 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _formKey                  = GlobalKey<FormState>();
-  final _nameController           = TextEditingController();
-  final _emailController          = TextEditingController();
-  final _passwordController       = TextEditingController();
+  final _formKey                   = GlobalKey<FormState>();
+  final _nameController            = TextEditingController();
+  final _emailController           = TextEditingController();
+  final _passwordController        = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _authService              = AuthService();
-  final _userRepository           = UserRepository();
+  final _authService               = AuthService();
+  final _userRepository            = UserRepository();
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -42,7 +42,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _errorMessage = null;
     });
 
-    // Step 1 — create Firebase Auth account
     final error = await _authService.register(
       _emailController.text,
       _passwordController.text,
@@ -56,7 +55,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // Step 2 — save user to Firestore
     final uid = _authService.currentUser!.uid;
     await _userRepository.createUser(
       uid:   uid,
@@ -68,7 +66,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    // Step 3 — navigate to login
     Navigator.pushNamedAndRemoveUntil(
       context,
       AppRoutes.login,
@@ -103,7 +100,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             child: Column(
               children: [
-                // Back button
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
@@ -120,8 +116,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Icon
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -141,8 +135,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Title
                 const Text(
                   'Create Account',
                   style: TextStyle(
@@ -160,8 +152,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-
-                // Form
                 Form(
                   key: _formKey,
                   child: Column(
@@ -209,8 +199,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-
-                      // Error message
                       if (_errorMessage != null)
                         Container(
                           width: double.infinity,
@@ -227,10 +215,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ),
                         ),
-
                       const SizedBox(height: 24),
-
-                      // Register button
                       CustomButton(
                         label: 'Create Account',
                         onPressed: _handleRegister,
@@ -240,8 +225,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             : AppColors.purple,
                       ),
                       const SizedBox(height: 16),
-
-                      // Login link
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

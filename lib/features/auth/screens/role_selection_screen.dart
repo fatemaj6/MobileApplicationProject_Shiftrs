@@ -106,7 +106,7 @@ class _RoleCard extends StatelessWidget {
       onTap: () {
         Navigator.pushNamed(
           context,
-          AppRoutes.register,
+          AppRoutes.login,
           arguments: role,
         );
       },

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_routes.dart';
 import 'data/repositories/profile_repository.dart';
+import 'features/auth/screens/login_screen.dart';
 import 'routes.dart';
 import 'firebase_options.dart';
 

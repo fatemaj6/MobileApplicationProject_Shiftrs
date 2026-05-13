@@ -19,7 +19,11 @@ class CareConnectApp extends StatelessWidget {
       title: 'CareConnect',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const LoginScreen(), //default home -> login screen
+      home: const Scaffold(
+        body: Center(
+          child: Text('CareConnect'),
+        ), //default home -> LoginScreen(),
+      ),
     );
   }
 }

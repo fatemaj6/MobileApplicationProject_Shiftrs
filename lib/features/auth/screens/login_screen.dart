@@ -33,14 +33,15 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    FocusScope.of(context).unfocus();
-    if (!_formKey.currentState!.validate()) return;
+  FocusScope.of(context).unfocus();
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
 
+  try {
     final error = await _authService.login(
       _emailController.text,
       _passwordController.text,
@@ -56,23 +57,47 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // fetch role from Firestore and navigate
-    final uid  = _authService.currentUser!.uid;
-    final role = await _userRepository.getUserRole(uid);
+    final user = _authService.currentUser;
+
+    if (user == null) {
+      setState(() {
+        _errorMessage = 'Login failed. Please try again.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    final role = await _userRepository
+        .getUserRole(user.uid)
+        .timeout(const Duration(seconds: 10));
 
     if (!mounted) return;
-    setState(() => _isLoading = false);
 
     if (role == 'caregiver' || role == 'family') {
+      setState(() => _isLoading = false);
+
       Navigator.pushNamedAndRemoveUntil(
         context,
         AppRoutes.caregiverHome,
         (route) => false,
       );
     } else {
-      setState(() => _errorMessage = 'Role not found. Please contact support.');
+      setState(() {
+        _errorMessage = 'Role not found. Please contact support.';
+        _isLoading = false;
+      });
     }
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      _errorMessage = 'Unable to complete login. Please try again.';
+      _isLoading = false;
+    });
+
+    debugPrint('Login error: $e');
   }
+}
 
   @override
   void dispose() {
@@ -80,7 +105,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     final isCaregiver = _role == 'caregiver';
@@ -224,18 +248,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 16),
 
                 // Forgot password
-                TextButton(
-                  onPressed: () {},
-                  child: Text(
-                    'Forgot password?',
-                    style: TextStyle(
-                      color: isCaregiver
-                          ? AppColors.primary
-                          : AppColors.purple,
-                      fontSize: 14,
-                    ),
+              TextButton(
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.resetPassword,
+                  arguments: _role,
+                ),
+                child: Text(
+                  'Forgot password?',
+                  style: TextStyle(
+                    color: isCaregiver
+                        ? AppColors.primary
+                        : AppColors.purple,
+                    fontSize: 14,
                   ),
                 ),
+              ),
 
                 // Create account
                 Row(

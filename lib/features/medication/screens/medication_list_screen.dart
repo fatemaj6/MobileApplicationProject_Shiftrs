@@ -92,60 +92,83 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
 
             final medications = snapshot.data ?? [];
 
-            final pending = medications.where((m) => m.status == 'pending').toList();
-            final given = medications.where((m) => m.status == 'given').toList();
-            final missed = medications.where((m) => m.status == 'missed').toList();
+            final pending =
+                medications.where((m) => m.status == 'pending').toList();
+            final given =
+                medications.where((m) => m.status == 'given').toList();
+            final missed =
+                medications.where((m) => m.status == 'missed').toList();
 
             return CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    padding: const EdgeInsets.fromLTRB(12, 16, 20, 0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Medications',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E293B),
-                          ),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.arrow_back_ios_new,
+                                size: 20,
+                                color: Color(0xFF1E293B),
+                              ),
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Medications',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          "Today's schedule",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF64748B),
+                        const Padding(
+                          padding: EdgeInsets.only(left: 52),
+                          child: Text(
+                            "Today's schedule",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
 
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _goToAddMedication(currentUserId),
-                            icon: const Icon(
-                              Icons.add,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            label: const Text(
-                              '+ Add New Medication',
-                              style: TextStyle(
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _goToAddMedication(currentUserId),
+                              icon: const Icon(
+                                Icons.add,
                                 color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
+                                size: 20,
                               ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0891B2),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
+                              label: const Text(
+                                'Add New Medication',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                              elevation: 0,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0891B2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                elevation: 0,
+                              ),
                             ),
                           ),
                         ),

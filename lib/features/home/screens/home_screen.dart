@@ -6,6 +6,9 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/routes/app_routes.dart';
+import '../../appointments/controllers/appointment_controller.dart';
+import '../../appointments/models/appointment_model.dart';
+import '../../appointments/widgets/appointment_card.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -504,11 +507,14 @@ class _CaregiverQuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final caregiverId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Quick Actions', style: AppTextStyles.h3),
         const SizedBox(height: 12),
+
         Row(
           children: [
             Expanded(
@@ -527,13 +533,29 @@ class _CaregiverQuickActions extends StatelessWidget {
               child: _QuickActionCard(
                 title: 'Add Care Note',
                 subtitle: 'Next sprint',
-                icon: Icons.add,
+                icon: Icons.note_add_outlined,
                 isPrimary: false,
                 isDisabled: true,
                 onTap: () {},
               ),
             ),
           ],
+        ),
+
+        const SizedBox(height: 12),
+
+        _QuickActionCard(
+          title: 'Add Appointment',
+          subtitle: 'Schedule visit',
+          icon: Icons.calendar_month_outlined,
+          isPrimary: false,
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.addAppointment,
+              arguments: caregiverId,
+            );
+          },
         ),
       ],
     );
@@ -808,43 +830,171 @@ class _ComingSoonSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SectionCard(
-      title: isFamily ? 'Recent Activity' : 'Upcoming Appointments',
-      actionText: 'View all',
-      child: Text(
-        'This section will be available in the next sprint.',
-        style: AppTextStyles.secondarySm,
-      ),
+    if (isFamily) {
+      return _SectionCard(
+        title: 'Recent Activity',
+        actionText: 'View all',
+        onActionTap: () {},
+        child: Text(
+          'This section will be available in the next sprint.',
+          style: AppTextStyles.secondarySm,
+        ),
+      );
+    }
+
+    final appointmentController = AppointmentController();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text('Upcoming Appointments', style: AppTextStyles.h3)),
+            InkWell(
+              onTap: () {
+                Navigator.pushNamed(context, AppRoutes.appointments);
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 6,
+                ),
+                child: Text(
+                  'View all',
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.purple,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        StreamBuilder<List<AppointmentModel>>(
+          stream: appointmentController.streamAppointments(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  'Loading appointments...',
+                  style: AppTextStyles.secondarySm,
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  'Unable to load appointments.',
+                  style: AppTextStyles.secondarySm,
+                ),
+              );
+            }
+
+            final now = DateTime.now();
+
+            final upcomingAppointments = (snapshot.data ?? [])
+                .where(
+                  (appointment) =>
+                      !appointment.appointmentDateTime.isBefore(now) &&
+                      appointment.status != 'cancelled',
+                )
+                .toList();
+
+            upcomingAppointments.sort(
+              (a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime),
+            );
+
+            final previewAppointments = upcomingAppointments.take(2).toList();
+
+            if (previewAppointments.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  'No upcoming appointments yet.',
+                  style: AppTextStyles.secondarySm,
+                ),
+              );
+            }
+
+            return Column(
+              children: previewAppointments
+                  .map(
+                    (appointment) => AppointmentCard(
+                      appointment: appointment,
+                      onEdit: null,
+                      onDelete: null,
+                    ),
+                  )
+                  .toList(),
+            );
+          },
+        ),
+      ],
     );
   }
 }
-
 class _SectionCard extends StatelessWidget {
   final String title;
   final String actionText;
+  final VoidCallback? onActionTap;
   final Widget child;
 
   const _SectionCard({
     required this.title,
     required this.actionText,
     required this.child,
+    this.onActionTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Opacity(
-      opacity: 0.7,
+      opacity: 0.95,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Expanded(child: Text(title, style: AppTextStyles.h3)),
-              Text(
-                actionText,
-                style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.purple,
-                  fontWeight: FontWeight.w700,
+              InkWell(
+                onTap: onActionTap,
+                borderRadius: BorderRadius.circular(20),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  child: Text(
+                    actionText,
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: AppColors.purple,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -858,14 +1008,13 @@ class _SectionCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(color: AppColors.border),
             ),
-            child: IgnorePointer(child: child),
+            child: child,
           ),
         ],
       ),
     );
   }
 }
-
 class _BottomNavigation extends StatelessWidget {
   final bool isFamily;
 
@@ -887,6 +1036,11 @@ class _BottomNavigation extends StatelessWidget {
       onTap: (index) {
         if (index == 1 && !isFamily) {
           Navigator.pushNamed(context, AppRoutes.medications);
+          return;
+        }
+
+        if (index == 2 && !isFamily) {
+          Navigator.pushNamed(context, AppRoutes.appointments);
           return;
         }
 

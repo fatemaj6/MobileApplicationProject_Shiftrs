@@ -25,6 +25,18 @@ class HomeScreen extends StatelessWidget {
     return userDoc.data();
   }
 
+  Future<void> _logout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+
+    if (context.mounted) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.roleSelection,
+        (route) => false,
+      );
+    }
+  }
+
   bool _isFamilyMember(String role) {
     final normalizedRole = role.toLowerCase().replaceAll(' ', '_');
 
@@ -135,6 +147,7 @@ class HomeScreen extends StatelessWidget {
                         fullName: fullName,
                         email: email,
                         isFamily: isFamily,
+                        onLogout: () => _logout(context),
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
@@ -194,11 +207,13 @@ class _HeaderSection extends StatelessWidget {
   final String fullName;
   final String email;
   final bool isFamily;
+  final VoidCallback onLogout;
 
   const _HeaderSection({
     required this.fullName,
     required this.email,
     required this.isFamily,
+    required this.onLogout,
   });
 
   String get _initial {
@@ -258,6 +273,20 @@ class _HeaderSection extends StatelessWidget {
                 child: const Icon(
                   Icons.notifications_none,
                   color: AppColors.primaryFg,
+                ),
+              ),
+              const SizedBox(width: 10),
+              InkWell(
+                borderRadius: BorderRadius.circular(50),
+                onTap: onLogout,
+                child: CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.white.withOpacity(0.22),
+                  child: const Icon(
+                    Icons.logout,
+                    color: AppColors.primaryFg,
+                    size: 22,
+                  ),
                 ),
               ),
             ],

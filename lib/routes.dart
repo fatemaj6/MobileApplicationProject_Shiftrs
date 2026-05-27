@@ -9,6 +9,7 @@ import 'features/home/screens/home_screen.dart';
 import 'features/auth/screens/reset_password_screen.dart';
 // Medication screens
 import 'features/medication/screens/medication_list_screen.dart';
+import 'features/medication/screens/family_medication_schedule_screen.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
   AppRoutes.welcome:       (ctx) => const WelcomeScreen(),
@@ -22,5 +23,5 @@ final Map<String, WidgetBuilder> appRoutes = {
 
   // Medication routes
   AppRoutes.medications:   (ctx) => const MedicationListScreen(),
-  AppRoutes.familyMedications:  (ctx) => const MedicationListScreen(),
+ AppRoutes.familyMedications: (ctx) => const FamilyMedicationScheduleScreen(),
 };

@@ -46,28 +46,32 @@ class HomeScreen extends StatelessWidget {
   }
 
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _medicationsStream({
-    required bool isFamily,
-  }) {
-    final currentUser = FirebaseAuth.instance.currentUser;
+  required bool isFamily,
+  required Map<String, dynamic> userData,
+}) {
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser == null) return const Stream.empty();
 
-    if (currentUser == null) {
-      return const Stream.empty();
-    }
+  final uid = currentUser.uid;
 
-    final uid = currentUser.uid;
-    final userField = isFamily ? 'patientId' : 'caregiverId';
+  final queryField = isFamily ? 'patientId' : 'caregiverId';
+  final queryValue = isFamily ? userData['linkedCaregiverId'] : uid;
 
-    return FirebaseFirestore.instance
-        .collection('medications')
-        .where(userField, isEqualTo: uid)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.where((doc) {
-        final data = doc.data();
-        return data['isDeleted'] != true;
-      }).toList();
-    });
+  if (queryValue == null || queryValue.toString().isEmpty) {
+    return const Stream.empty();
   }
+
+  return FirebaseFirestore.instance
+      .collection('medications')
+      .where(queryField, isEqualTo: queryValue)
+      .snapshots()
+      .map((snapshot) {
+    return snapshot.docs.where((doc) {
+      final data = doc.data();
+      return data['isDeleted'] != true;
+    }).toList();
+  });
+}
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +107,10 @@ class HomeScreen extends StatelessWidget {
         final isFamily = _isFamilyMember(role);
 
         return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
-          stream: _medicationsStream(isFamily: isFamily),
+          stream: _medicationsStream(
+          isFamily: isFamily,
+          userData: userData,
+        ),
           builder: (context, medicationSnapshot) {
             if (medicationSnapshot.hasError) {
               return Scaffold(
@@ -240,57 +247,68 @@ class _HeaderSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: [
-              Expanded(
-                child: Text(
-                  isFamily ? 'Family Dashboard' : 'Good morning',
-                  style: AppTextStyles.secondarySm.copyWith(
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              InkWell(
-                borderRadius: BorderRadius.circular(50),
-                onTap: () {
-                  Navigator.pushNamed(context, AppRoutes.profile);
-                },
-                child: CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Colors.white.withOpacity(0.22),
-                  child: Text(
-                    _initial,
-                    style: AppTextStyles.h4.copyWith(
-                      color: AppColors.primaryFg,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: Colors.white.withOpacity(0.22),
-                child: const Icon(
-                  Icons.notifications_none,
-                  color: AppColors.primaryFg,
-                ),
-              ),
-              const SizedBox(width: 10),
-              InkWell(
-                borderRadius: BorderRadius.circular(50),
-                onTap: onLogout,
-                child: CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Colors.white.withOpacity(0.22),
-                  child: const Icon(
-                    Icons.logout,
-                    color: AppColors.primaryFg,
-                    size: 22,
-                  ),
-                ),
-              ),
-            ],
+  children: [
+    Expanded(
+      child: Text(
+        isFamily ? 'Family Dashboard' : 'Good morning',
+        style: AppTextStyles.secondarySm.copyWith(
+          color: Colors.white70,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    ),
+
+    InkWell(
+      borderRadius: BorderRadius.circular(50),
+      onTap: () {
+        Navigator.pushNamed(context, AppRoutes.profile);
+      },
+      child: CircleAvatar(
+        radius: 22,
+        backgroundColor: Colors.white.withOpacity(0.22),
+        child: Text(
+          _initial,
+          style: AppTextStyles.h4.copyWith(
+            color: AppColors.primaryFg,
           ),
+        ),
+      ),
+    ),
+
+    const SizedBox(width: 10),
+
+    InkWell(
+      borderRadius: BorderRadius.circular(50),
+      onTap: () {
+        Navigator.pushNamed(context, AppRoutes.familyMedications);
+      },
+      child: CircleAvatar(
+        radius: 22,
+        backgroundColor: Colors.white.withOpacity(0.22),
+        child: const Icon(
+          Icons.notifications_none,
+          color: AppColors.primaryFg,
+        ),
+      ),
+    ),
+
+    const SizedBox(width: 10),
+
+    InkWell(
+      borderRadius: BorderRadius.circular(50),
+      onTap: onLogout,
+      child: CircleAvatar(
+        radius: 22,
+        backgroundColor: Colors.white.withOpacity(0.22),
+        child: const Icon(
+          Icons.logout,
+          color: AppColors.primaryFg,
+          size: 22,
+        ),
+      ),
+    ),
+  ],
+),
           const SizedBox(height: 8),
           Text(
             isFamily ? 'Care Overview' : 'Care Dashboard',
@@ -344,11 +362,6 @@ class _HeaderSection extends StatelessWidget {
                             label: isFamily ? 'Family Member' : 'Caregiver',
                             color: dark,
                           ),
-                          if (isFamily)
-                            const _UserTag(
-                              label: 'Temporary View',
-                              color: AppColors.purple,
-                            ),
                         ],
                       ),
                     ],
@@ -742,6 +755,9 @@ class _FamilyMedicationStatus extends StatelessWidget {
     return _SectionCard(
       title: 'Medication Status',
       actionText: 'View details',
+      onActionTap: () {
+        Navigator.pushNamed(context, AppRoutes.familyMedications);
+      },
       child: Column(
         children: [
           _StatusLine(
@@ -823,45 +839,47 @@ class _SectionCard extends StatelessWidget {
   final String title;
   final String actionText;
   final Widget child;
+  final VoidCallback? onActionTap;
 
   const _SectionCard({
     required this.title,
     required this.actionText,
     required this.child,
+    this.onActionTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.7,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: Text(title, style: AppTextStyles.h3)),
-              Text(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text(title, style: AppTextStyles.h3)),
+            InkWell(
+              onTap: onActionTap,
+              child: Text(
                 actionText,
                 style: AppTextStyles.bodySm.copyWith(
                   color: AppColors.purple,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              border: Border.all(color: AppColors.border),
             ),
-            child: IgnorePointer(child: child),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppColors.border),
           ),
-        ],
-      ),
+          child: IgnorePointer(child: child),
+        ),
+      ],
     );
   }
 }
@@ -885,8 +903,11 @@ class _BottomNavigation extends StatelessWidget {
       selectedFontSize: 11,
       unselectedFontSize: 11,
       onTap: (index) {
-        if (index == 1 && !isFamily) {
-          Navigator.pushNamed(context, AppRoutes.medications);
+        if (index == 1) {
+          Navigator.pushNamed(
+            context,
+            isFamily ? AppRoutes.familyMedications : AppRoutes.medications,
+          );
           return;
         }
 

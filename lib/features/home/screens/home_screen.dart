@@ -9,13 +9,13 @@ import '../../../core/routes/app_routes.dart';
 import '../../appointments/controllers/appointment_controller.dart';
 import '../../appointments/models/appointment_model.dart';
 import '../../appointments/widgets/appointment_card.dart';
+import '../../notifications/widgets/appointment_notification_bell.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   Future<Map<String, dynamic>?> _getCurrentUserData() async {
     final currentUser = FirebaseAuth.instance.currentUser;
-
     if (currentUser == null) return null;
 
     final userDoc = await FirebaseFirestore.instance
@@ -24,13 +24,11 @@ class HomeScreen extends StatelessWidget {
         .get();
 
     if (!userDoc.exists) return null;
-
     return userDoc.data();
   }
 
   Future<void> _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
-
     if (context.mounted) {
       Navigator.pushNamedAndRemoveUntil(
         context,
@@ -42,7 +40,6 @@ class HomeScreen extends StatelessWidget {
 
   bool _isFamilyMember(String role) {
     final normalizedRole = role.toLowerCase().replaceAll(' ', '_');
-
     return normalizedRole == 'family_member' ||
         normalizedRole == 'familymember' ||
         normalizedRole == 'family';
@@ -56,7 +53,6 @@ class HomeScreen extends StatelessWidget {
     if (currentUser == null) return const Stream.empty();
 
     final uid = currentUser.uid;
-
     final queryField = isFamily ? 'patientId' : 'caregiverId';
     final queryValue = isFamily ? userData['linkedCaregiverId'] : uid;
 
@@ -69,11 +65,11 @@ class HomeScreen extends StatelessWidget {
         .where(queryField, isEqualTo: queryValue)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.where((doc) {
-        final data = doc.data();
-        return data['isDeleted'] != true;
-      }).toList();
-    });
+          return snapshot.docs.where((doc) {
+            final data = doc.data();
+            return data['isDeleted'] != true;
+          }).toList();
+        });
   }
 
   @override
@@ -106,14 +102,10 @@ class HomeScreen extends StatelessWidget {
         final fullName = userData['fullName'] ?? userData['name'] ?? 'User';
         final email = userData['email'] ?? '';
         final role = userData['role'] ?? '';
-
         final isFamily = _isFamilyMember(role);
 
         return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
-          stream: _medicationsStream(
-            isFamily: isFamily,
-            userData: userData,
-          ),
+          stream: _medicationsStream(isFamily: isFamily, userData: userData),
           builder: (context, medicationSnapshot) {
             if (medicationSnapshot.hasError) {
               return Scaffold(
@@ -136,15 +128,12 @@ class HomeScreen extends StatelessWidget {
             final givenCount = medicationDocs
                 .where((doc) => doc.data()['status'] == 'given')
                 .length;
-
             final pendingCount = medicationDocs
                 .where((doc) => doc.data()['status'] == 'pending')
                 .length;
-
             final missedCount = medicationDocs
                 .where((doc) => doc.data()['status'] == 'missed')
                 .length;
-
             final totalCount = medicationDocs.length;
 
             return Scaffold(
@@ -179,9 +168,7 @@ class HomeScreen extends StatelessWidget {
                                   pendingCount: pendingCount,
                                   missedCount: missedCount,
                                 ),
-
                               const SizedBox(height: 24),
-
                               if (isFamily)
                                 _FamilyMedicationStatus(
                                   givenCount: givenCount,
@@ -192,9 +179,7 @@ class HomeScreen extends StatelessWidget {
                                 _CaregiverQuickActions(
                                   pendingCount: pendingCount,
                                 ),
-
                               const SizedBox(height: 24),
-
                               _ComingSoonSection(isFamily: isFamily),
                             ],
                           ),
@@ -277,12 +262,15 @@ class _HeaderSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              InkWell(
-                borderRadius: BorderRadius.circular(50),
-                onTap: () {
-                  Navigator.pushNamed(context, AppRoutes.familyMedications);
-                },
-                child: CircleAvatar(
+              if (isFamily)
+                AppointmentNotificationBell(
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    AppRoutes.familyNotifications,
+                  ),
+                )
+              else
+                CircleAvatar(
                   radius: 22,
                   backgroundColor: Colors.white.withOpacity(0.22),
                   child: const Icon(
@@ -290,7 +278,6 @@ class _HeaderSection extends StatelessWidget {
                     color: AppColors.primaryFg,
                   ),
                 ),
-              ),
               const SizedBox(width: 10),
               InkWell(
                 borderRadius: BorderRadius.circular(50),
@@ -327,8 +314,9 @@ class _HeaderSection extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 27,
-                  backgroundColor:
-                      isFamily ? AppColors.purpleBg : AppColors.cyanBg,
+                  backgroundColor: isFamily
+                      ? AppColors.purpleBg
+                      : AppColors.cyanBg,
                   child: Text(
                     _initial,
                     style: AppTextStyles.h3.copyWith(
@@ -378,10 +366,7 @@ class _UserTag extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _UserTag({
-    required this.label,
-    required this.color,
-  });
+  const _UserTag({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -495,9 +480,7 @@ class _StatCard extends StatelessWidget {
           const Spacer(),
           Text(
             number,
-            style: AppTextStyles.h2.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.w800),
           ),
           Text(label, style: AppTextStyles.secondarySm),
         ],
@@ -509,9 +492,7 @@ class _StatCard extends StatelessWidget {
 class _CaregiverQuickActions extends StatelessWidget {
   final int pendingCount;
 
-  const _CaregiverQuickActions({
-    required this.pendingCount,
-  });
+  const _CaregiverQuickActions({required this.pendingCount});
 
   @override
   Widget build(BuildContext context) {
@@ -589,8 +570,9 @@ class _QuickActionCard extends StatelessWidget {
     final bgColor = isPrimary ? AppColors.primary : AppColors.card;
     final textColor = isPrimary ? AppColors.primaryFg : AppColors.foreground;
     final subColor = isPrimary ? Colors.white70 : AppColors.textSecondary;
-    final iconBg =
-        isPrimary ? Colors.white.withOpacity(0.22) : AppColors.purpleBg;
+    final iconBg = isPrimary
+        ? Colors.white.withOpacity(0.22)
+        : AppColors.purpleBg;
     final iconColor = isPrimary ? AppColors.primaryFg : AppColors.purple;
 
     return Opacity(
@@ -659,8 +641,9 @@ class _FamilySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final adherence =
-        totalCount == 0 ? 0 : ((givenCount / totalCount) * 100).round();
+    final adherence = totalCount == 0
+        ? 0
+        : ((givenCount / totalCount) * 100).round();
 
     return Container(
       width: double.infinity,
@@ -740,9 +723,7 @@ class _SummaryItem extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 value,
-                style: AppTextStyles.h1.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: AppTextStyles.h1.copyWith(fontWeight: FontWeight.w900),
               ),
               Text(caption, style: AppTextStyles.secondarySm),
             ],
@@ -774,21 +755,9 @@ class _FamilyMedicationStatus extends StatelessWidget {
       },
       child: Column(
         children: [
-          _StatusLine(
-            label: 'Given',
-            count: givenCount,
-            color: AppColors.given,
-          ),
-          _StatusLine(
-            label: 'Pending',
-            count: pendingCount,
-            color: AppColors.pending,
-          ),
-          _StatusLine(
-            label: 'Missed',
-            count: missedCount,
-            color: AppColors.destructive,
-          ),
+          _StatusLine(label: 'Given', count: givenCount, color: AppColors.given),
+          _StatusLine(label: 'Pending', count: pendingCount, color: AppColors.pending),
+          _StatusLine(label: 'Missed', count: missedCount, color: AppColors.destructive),
         ],
       ),
     );
@@ -814,14 +783,10 @@ class _StatusLine extends StatelessWidget {
         children: [
           CircleAvatar(radius: 5, backgroundColor: color),
           const SizedBox(width: 10),
-          Expanded(
-            child: Text(label, style: AppTextStyles.secondarySm),
-          ),
+          Expanded(child: Text(label, style: AppTextStyles.secondarySm)),
           Text(
             count.toString(),
-            style: AppTextStyles.bodyMd.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -832,9 +797,7 @@ class _StatusLine extends StatelessWidget {
 class _ComingSoonSection extends StatelessWidget {
   final bool isFamily;
 
-  const _ComingSoonSection({
-    required this.isFamily,
-  });
+  const _ComingSoonSection({required this.isFamily});
 
   @override
   Widget build(BuildContext context) {
@@ -866,10 +829,7 @@ class _ComingSoonSection extends StatelessWidget {
               },
               borderRadius: BorderRadius.circular(20),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: Text(
                   'View all',
                   style: AppTextStyles.bodySm.copyWith(
@@ -918,19 +878,14 @@ class _ComingSoonSection extends StatelessWidget {
             }
 
             final now = DateTime.now();
-
             final upcomingAppointments = (snapshot.data ?? [])
                 .where(
-                  (appointment) =>
-                      !appointment.appointmentDateTime.isBefore(now) &&
-                      appointment.status != 'cancelled',
+                  (a) => !a.appointmentDateTime.isBefore(now) &&
+                      a.status != 'cancelled',
                 )
-                .toList();
-
-            upcomingAppointments.sort(
-              (a, b) =>
-                  a.appointmentDateTime.compareTo(b.appointmentDateTime),
-            );
+                .toList()
+              ..sort((a, b) =>
+                  a.appointmentDateTime.compareTo(b.appointmentDateTime));
 
             final previewAppointments = upcomingAppointments.take(2).toList();
 
@@ -952,13 +907,11 @@ class _ComingSoonSection extends StatelessWidget {
 
             return Column(
               children: previewAppointments
-                  .map(
-                    (appointment) => AppointmentCard(
-                      appointment: appointment,
-                      onEdit: null,
-                      onDelete: null,
-                    ),
-                  )
+                  .map((a) => AppointmentCard(
+                        appointment: a,
+                        onEdit: null,
+                        onDelete: null,
+                      ))
                   .toList(),
             );
           },
@@ -993,10 +946,7 @@ class _SectionCard extends StatelessWidget {
               onTap: onActionTap,
               borderRadius: BorderRadius.circular(20),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: Text(
                   actionText,
                   style: AppTextStyles.bodySm.copyWith(
@@ -1027,9 +977,7 @@ class _SectionCard extends StatelessWidget {
 class _BottomNavigation extends StatelessWidget {
   final bool isFamily;
 
-  const _BottomNavigation({
-    required this.isFamily,
-  });
+  const _BottomNavigation({required this.isFamily});
 
   @override
   Widget build(BuildContext context) {
@@ -1050,12 +998,13 @@ class _BottomNavigation extends StatelessWidget {
           );
           return;
         }
-
-        if (index == 2 && !isFamily) {
-          Navigator.pushNamed(context, AppRoutes.appointments);
+        if (index == 2) {
+          Navigator.pushNamed(
+            context,
+            isFamily ? AppRoutes.familyAppointments : AppRoutes.appointments,
+          );
           return;
         }
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('This feature is coming in the next sprint.'),

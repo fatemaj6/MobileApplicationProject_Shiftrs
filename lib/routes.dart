@@ -13,22 +13,25 @@ import 'features/appointments/screens/appointment_list_screen.dart';
 import 'features/appointments/screens/add_appointment_screen.dart';
 import 'features/appointments/screens/edit_appointment_screen.dart';
 import 'features/appointments/models/appointment_model.dart';
+//Appointment screens
+import 'features/appointments/screens/family_appointment_list_screen.dart';
+import 'features/notifications/screens/appointment_notifications_screen.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
-  AppRoutes.welcome:       (ctx) => const WelcomeScreen(),
+  AppRoutes.welcome: (ctx) => const WelcomeScreen(),
   AppRoutes.roleSelection: (ctx) => const RoleSelectionScreen(),
-  AppRoutes.register:      (ctx) => const RegisterScreen(),
-  AppRoutes.login:         (ctx) => const LoginScreen(),
+  AppRoutes.register: (ctx) => const RegisterScreen(),
+  AppRoutes.login: (ctx) => const LoginScreen(),
   AppRoutes.caregiverHome: (ctx) => const HomeScreen(),
-  AppRoutes.familyHome:    (ctx) => const HomeScreen(),
-  AppRoutes.profile:       (ctx) => const ProfileScreen(),
+  AppRoutes.familyHome: (ctx) => const HomeScreen(),
+  AppRoutes.profile: (ctx) => const ProfileScreen(),
   AppRoutes.resetPassword: (context) => const ResetPasswordScreen(),
 
   // Medication routes
-  AppRoutes.medications:   (ctx) => const MedicationListScreen(),
-  AppRoutes.familyMedications:  (ctx) => const MedicationListScreen(),
+  AppRoutes.medications: (ctx) => const MedicationListScreen(),
+  AppRoutes.familyMedications: (ctx) => const MedicationListScreen(),
   // Appointment routes
-// Appointment routes
+  // Appointment routes
   AppRoutes.appointments: (ctx) => const AppointmentListScreen(),
 
   AppRoutes.addAppointment: (ctx) {
@@ -41,4 +44,8 @@ final Map<String, WidgetBuilder> appRoutes = {
         ModalRoute.of(ctx)!.settings.arguments as AppointmentModel;
     return EditAppointmentScreen(appointment: appointment);
   },
+
+  AppRoutes.familyAppointments: (ctx) => const FamilyAppointmentListScreen(),
+  AppRoutes.familyNotifications: (ctx) =>
+      const AppointmentNotificationsScreen(),
 };

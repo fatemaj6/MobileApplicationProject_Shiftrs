@@ -2,34 +2,35 @@ class AppRoutes {
   AppRoutes._();
 
   // Onboarding
-  static const String welcome        = '/welcome';
-  static const String roleSelection  = '/role-selection';
-  static const String login          = '/login';
-  static const String register       = '/register';
+  static const String welcome = '/welcome';
+  static const String roleSelection = '/role-selection';
+  static const String login = '/login';
+  static const String register = '/register';
   static const String resetPassword = '/reset-password';
 
   // Caregiver
-  static const String caregiverHome  = '/caregiver/home';
-  static const String medications    = '/caregiver/medications';
-  static const String addMedication  = '/caregiver/add-medication';
+  static const String caregiverHome = '/caregiver/home';
+  static const String medications = '/caregiver/medications';
+  static const String addMedication = '/caregiver/add-medication';
   static const String editMedication = '/caregiver/edit-medication';
-  static const String appointments   = '/caregiver/appointments';
-  static const String careNotes      = '/caregiver/care-notes';
-  static const String addCareNote    = '/caregiver/add-note';
+  static const String appointments = '/caregiver/appointments';
+  static const String careNotes = '/caregiver/care-notes';
+  static const String addCareNote = '/caregiver/add-note';
 
   // Family
-  static const String familyHome        = '/family/home';
+  static const String familyHome = '/family/home';
   static const String familyMedications = '/family/medications';
+  static const String familyAppointments = '/family/appointments';
+  static const String familyNotifications = '/family/notifications';
 
   // Shared
-  static const String notifications  = '/notifications';
-  static const String reports        = '/reports';
-  static const String aiAssistant    = '/ai-assistant';
-  static const String profile        = '/profile';
-
+  static const String notifications = '/notifications';
+  static const String reports = '/reports';
+  static const String aiAssistant = '/ai-assistant';
+  static const String profile = '/profile';
 
   // Appointment routes
 
-static const String addAppointment = '/appointments/add';
-static const String editAppointment = '/appointments/edit';
+  static const String addAppointment = '/appointments/add';
+  static const String editAppointment = '/appointments/edit';
 }

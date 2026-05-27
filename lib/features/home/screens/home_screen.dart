@@ -10,6 +10,8 @@ import '../../appointments/controllers/appointment_controller.dart';
 import '../../appointments/models/appointment_model.dart';
 import '../../appointments/widgets/appointment_card.dart';
 
+import '../../notifications/widgets/appointment_notification_bell.dart';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -65,11 +67,11 @@ class HomeScreen extends StatelessWidget {
         .where(userField, isEqualTo: uid)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.where((doc) {
-        final data = doc.data();
-        return data['isDeleted'] != true;
-      }).toList();
-    });
+          return snapshot.docs.where((doc) {
+            final data = doc.data();
+            return data['isDeleted'] != true;
+          }).toList();
+        });
   }
 
   @override
@@ -270,14 +272,22 @@ class _HeaderSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: Colors.white.withOpacity(0.22),
-                child: const Icon(
-                  Icons.notifications_none,
-                  color: AppColors.primaryFg,
+              if (isFamily)
+                AppointmentNotificationBell(
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    AppRoutes.familyNotifications,
+                  ),
+                )
+              else
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.white.withOpacity(0.22),
+                  child: const Icon(
+                    Icons.notifications_none,
+                    color: AppColors.primaryFg,
+                  ),
                 ),
-              ),
               const SizedBox(width: 10),
               InkWell(
                 borderRadius: BorderRadius.circular(50),
@@ -314,8 +324,9 @@ class _HeaderSection extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 27,
-                  backgroundColor:
-                      isFamily ? AppColors.purpleBg : AppColors.cyanBg,
+                  backgroundColor: isFamily
+                      ? AppColors.purpleBg
+                      : AppColors.cyanBg,
                   child: Text(
                     _initial,
                     style: AppTextStyles.h3.copyWith(
@@ -370,10 +381,7 @@ class _UserTag extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _UserTag({
-    required this.label,
-    required this.color,
-  });
+  const _UserTag({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -487,9 +495,7 @@ class _StatCard extends StatelessWidget {
           const Spacer(),
           Text(
             number,
-            style: AppTextStyles.h2.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.w800),
           ),
           Text(label, style: AppTextStyles.secondarySm),
         ],
@@ -501,9 +507,7 @@ class _StatCard extends StatelessWidget {
 class _CaregiverQuickActions extends StatelessWidget {
   final int pendingCount;
 
-  const _CaregiverQuickActions({
-    required this.pendingCount,
-  });
+  const _CaregiverQuickActions({required this.pendingCount});
 
   @override
   Widget build(BuildContext context) {
@@ -584,8 +588,9 @@ class _QuickActionCard extends StatelessWidget {
     final bgColor = isPrimary ? AppColors.primary : AppColors.card;
     final textColor = isPrimary ? AppColors.primaryFg : AppColors.foreground;
     final subColor = isPrimary ? Colors.white70 : AppColors.textSecondary;
-    final iconBg =
-        isPrimary ? Colors.white.withOpacity(0.22) : AppColors.purpleBg;
+    final iconBg = isPrimary
+        ? Colors.white.withOpacity(0.22)
+        : AppColors.purpleBg;
     final iconColor = isPrimary ? AppColors.primaryFg : AppColors.purple;
 
     return Opacity(
@@ -654,8 +659,9 @@ class _FamilySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final adherence =
-        totalCount == 0 ? 0 : ((givenCount / totalCount) * 100).round();
+    final adherence = totalCount == 0
+        ? 0
+        : ((givenCount / totalCount) * 100).round();
 
     return Container(
       width: double.infinity,
@@ -735,9 +741,7 @@ class _SummaryItem extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 value,
-                style: AppTextStyles.h1.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: AppTextStyles.h1.copyWith(fontWeight: FontWeight.w900),
               ),
               Text(caption, style: AppTextStyles.secondarySm),
             ],
@@ -806,14 +810,10 @@ class _StatusLine extends StatelessWidget {
         children: [
           CircleAvatar(radius: 5, backgroundColor: color),
           const SizedBox(width: 10),
-          Expanded(
-            child: Text(label, style: AppTextStyles.secondarySm),
-          ),
+          Expanded(child: Text(label, style: AppTextStyles.secondarySm)),
           Text(
             count.toString(),
-            style: AppTextStyles.bodyMd.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -824,9 +824,7 @@ class _StatusLine extends StatelessWidget {
 class _ComingSoonSection extends StatelessWidget {
   final bool isFamily;
 
-  const _ComingSoonSection({
-    required this.isFamily,
-  });
+  const _ComingSoonSection({required this.isFamily});
 
   @override
   Widget build(BuildContext context) {
@@ -849,17 +847,16 @@ class _ComingSoonSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: Text('Upcoming Appointments', style: AppTextStyles.h3)),
+            Expanded(
+              child: Text('Upcoming Appointments', style: AppTextStyles.h3),
+            ),
             InkWell(
               onTap: () {
                 Navigator.pushNamed(context, AppRoutes.appointments);
               },
               borderRadius: BorderRadius.circular(20),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: Text(
                   'View all',
                   style: AppTextStyles.bodySm.copyWith(
@@ -957,6 +954,7 @@ class _ComingSoonSection extends StatelessWidget {
     );
   }
 }
+
 class _SectionCard extends StatelessWidget {
   final String title;
   final String actionText;
@@ -1015,12 +1013,11 @@ class _SectionCard extends StatelessWidget {
     );
   }
 }
+
 class _BottomNavigation extends StatelessWidget {
   final bool isFamily;
 
-  const _BottomNavigation({
-    required this.isFamily,
-  });
+  const _BottomNavigation({required this.isFamily});
 
   @override
   Widget build(BuildContext context) {
@@ -1039,6 +1036,10 @@ class _BottomNavigation extends StatelessWidget {
           return;
         }
 
+        if (index == 2 && isFamily) {
+          Navigator.pushNamed(context, AppRoutes.familyAppointments);
+          return;
+        }
         if (index == 2 && !isFamily) {
           Navigator.pushNamed(context, AppRoutes.appointments);
           return;

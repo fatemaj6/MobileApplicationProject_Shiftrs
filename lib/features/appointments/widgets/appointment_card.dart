@@ -7,12 +7,14 @@ class AppointmentCard extends StatelessWidget {
   final AppointmentModel appointment;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onAddNote;
 
   const AppointmentCard({
     super.key,
     required this.appointment,
     this.onEdit,
     this.onDelete,
+    this.onAddNote,
   });
 
   Color _badgeColor(String type) {
@@ -166,13 +168,82 @@ class AppointmentCard extends StatelessWidget {
 
             if (appointment.notes.trim().isNotEmpty) ...[
               const SizedBox(height: 10),
-              Text(
-                appointment.notes,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: muted
-                      ? const Color(0xFFCBD5E1)
-                      : const Color(0xFF64748B),
+              if (onAddNote != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: muted
+                        ? const Color(0xFFF1F5F9)
+                        : const Color(0xFFF3E8FF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.notes,
+                        size: 14,
+                        color: muted
+                            ? const Color(0xFFCBD5E1)
+                            : const Color(0xFF9333EA),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          appointment.notes,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: muted
+                                ? const Color(0xFFCBD5E1)
+                                : const Color(0xFF6B21A8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Text(
+                  appointment.notes,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: muted
+                        ? const Color(0xFFCBD5E1)
+                        : const Color(0xFF64748B),
+                  ),
+                ),
+            ],
+            if (onAddNote != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onAddNote,
+                  icon: Icon(
+                    appointment.notes.trim().isNotEmpty
+                        ? Icons.edit_note
+                        : Icons.note_add_outlined,
+                    size: 18,
+                    color: const Color(0xFF9333EA),
+                  ),
+                  label: Text(
+                    appointment.notes.trim().isNotEmpty
+                        ? 'Edit Note'
+                        : 'Add Visit Note',
+                    style: const TextStyle(
+                      color: Color(0xFF9333EA),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    side: const BorderSide(color: Color(0xFFD8B4FE)),
+                  ),
                 ),
               ),
             ],
@@ -193,9 +264,7 @@ class AppointmentCard extends StatelessWidget {
         Icon(
           icon,
           size: 15,
-          color: muted
-              ? const Color(0xFFCBD5E1)
-              : const Color(0xFF0891B2),
+          color: muted ? const Color(0xFFCBD5E1) : const Color(0xFF0891B2),
         ),
         const SizedBox(width: 6),
         Expanded(
@@ -203,9 +272,7 @@ class AppointmentCard extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 13,
-              color: muted
-                  ? const Color(0xFFCBD5E1)
-                  : const Color(0xFF475569),
+              color: muted ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
             ),
           ),
         ),

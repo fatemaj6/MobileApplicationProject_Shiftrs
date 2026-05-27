@@ -16,13 +16,16 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _formKey                   = GlobalKey<FormState>();
-  final _nameController            = TextEditingController();
-  final _emailController           = TextEditingController();
-  final _passwordController        = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _caregiverEmailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _authService               = AuthService();
-  final _userRepository            = UserRepository();
+
+  final _authService = AuthService();
+  final _userRepository = UserRepository();
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -56,14 +59,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     final uid = _authService.currentUser!.uid;
-    await _userRepository.createUser(
-      uid:   uid,
-      name:  _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      role:  _role,
-    );
+    String? linkedCaregiverId;
+
+    try {
+      if (_role == 'family') {
+        linkedCaregiverId = await _userRepository.findCaregiverUidByEmail(
+          _caregiverEmailController.text.trim(),
+        );
+
+        if (linkedCaregiverId == null) {
+          setState(() {
+            _errorMessage =
+                'No caregiver account found with this email. Please make sure the caregiver has registered first.';
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
+      await _userRepository.createUser(
+        uid: uid,
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        role: _role,
+        linkedCaregiverId: linkedCaregiverId,
+      );
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to create profile: $e';
+        _isLoading = false;
+      });
+      return;
+    }
 
     if (!mounted) return;
+
     setState(() => _isLoading = false);
 
     Navigator.pushNamedAndRemoveUntil(
@@ -77,6 +107,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _caregiverEmailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -172,6 +203,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         keyboardType: TextInputType.emailAddress,
                         validator: Validators.email,
                       ),
+                      if (_role == 'family') ...[
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          label: 'Caregiver Email',
+                          hint: 'Caregiver must have an account first',
+                          controller: _caregiverEmailController,
+                          prefixIcon: Icons.link_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: Validators.email,
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       CustomTextField(
                         label: 'Password',
@@ -220,9 +262,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         label: 'Create Account',
                         onPressed: _handleRegister,
                         isLoading: _isLoading,
-                        backgroundColor: isCaregiver
-                            ? AppColors.primary
-                            : AppColors.purple,
+                        backgroundColor:
+                            isCaregiver ? AppColors.primary : AppColors.purple,
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -237,6 +278,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               context,
                               AppRoutes.login,
                               (route) => false,
+                              arguments: _role,
                             ),
                             child: Text(
                               'Sign In',

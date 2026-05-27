@@ -9,7 +9,6 @@ import '../../../core/routes/app_routes.dart';
 import '../../appointments/controllers/appointment_controller.dart';
 import '../../appointments/models/appointment_model.dart';
 import '../../appointments/widgets/appointment_card.dart';
-
 import '../../notifications/widgets/appointment_notification_bell.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -17,7 +16,6 @@ class HomeScreen extends StatelessWidget {
 
   Future<Map<String, dynamic>?> _getCurrentUserData() async {
     final currentUser = FirebaseAuth.instance.currentUser;
-
     if (currentUser == null) return null;
 
     final userDoc = await FirebaseFirestore.instance
@@ -26,13 +24,11 @@ class HomeScreen extends StatelessWidget {
         .get();
 
     if (!userDoc.exists) return null;
-
     return userDoc.data();
   }
 
   Future<void> _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
-
     if (context.mounted) {
       Navigator.pushNamedAndRemoveUntil(
         context,
@@ -44,7 +40,6 @@ class HomeScreen extends StatelessWidget {
 
   bool _isFamilyMember(String role) {
     final normalizedRole = role.toLowerCase().replaceAll(' ', '_');
-
     return normalizedRole == 'family_member' ||
         normalizedRole == 'familymember' ||
         normalizedRole == 'family';
@@ -52,19 +47,22 @@ class HomeScreen extends StatelessWidget {
 
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _medicationsStream({
     required bool isFamily,
+    required Map<String, dynamic> userData,
   }) {
     final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return const Stream.empty();
 
-    if (currentUser == null) {
+    final uid = currentUser.uid;
+    final queryField = isFamily ? 'patientId' : 'caregiverId';
+    final queryValue = isFamily ? userData['linkedCaregiverId'] : uid;
+
+    if (queryValue == null || queryValue.toString().isEmpty) {
       return const Stream.empty();
     }
 
-    final uid = currentUser.uid;
-    final userField = isFamily ? 'patientId' : 'caregiverId';
-
     return FirebaseFirestore.instance
         .collection('medications')
-        .where(userField, isEqualTo: uid)
+        .where(queryField, isEqualTo: queryValue)
         .snapshots()
         .map((snapshot) {
           return snapshot.docs.where((doc) {
@@ -104,11 +102,10 @@ class HomeScreen extends StatelessWidget {
         final fullName = userData['fullName'] ?? userData['name'] ?? 'User';
         final email = userData['email'] ?? '';
         final role = userData['role'] ?? '';
-
         final isFamily = _isFamilyMember(role);
 
         return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
-          stream: _medicationsStream(isFamily: isFamily),
+          stream: _medicationsStream(isFamily: isFamily, userData: userData),
           builder: (context, medicationSnapshot) {
             if (medicationSnapshot.hasError) {
               return Scaffold(
@@ -131,15 +128,12 @@ class HomeScreen extends StatelessWidget {
             final givenCount = medicationDocs
                 .where((doc) => doc.data()['status'] == 'given')
                 .length;
-
             final pendingCount = medicationDocs
                 .where((doc) => doc.data()['status'] == 'pending')
                 .length;
-
             final missedCount = medicationDocs
                 .where((doc) => doc.data()['status'] == 'missed')
                 .length;
-
             final totalCount = medicationDocs.length;
 
             return Scaffold(
@@ -174,9 +168,7 @@ class HomeScreen extends StatelessWidget {
                                   pendingCount: pendingCount,
                                   missedCount: missedCount,
                                 ),
-
                               const SizedBox(height: 24),
-
                               if (isFamily)
                                 _FamilyMedicationStatus(
                                   givenCount: givenCount,
@@ -187,9 +179,7 @@ class HomeScreen extends StatelessWidget {
                                 _CaregiverQuickActions(
                                   pendingCount: pendingCount,
                                 ),
-
                               const SizedBox(height: 24),
-
                               _ComingSoonSection(isFamily: isFamily),
                             ],
                           ),
@@ -358,11 +348,6 @@ class _HeaderSection extends StatelessWidget {
                             label: isFamily ? 'Family Member' : 'Caregiver',
                             color: dark,
                           ),
-                          if (isFamily)
-                            const _UserTag(
-                              label: 'Temporary View',
-                              color: AppColors.purple,
-                            ),
                         ],
                       ),
                     ],
@@ -518,7 +503,6 @@ class _CaregiverQuickActions extends StatelessWidget {
       children: [
         Text('Quick Actions', style: AppTextStyles.h3),
         const SizedBox(height: 12),
-
         Row(
           children: [
             Expanded(
@@ -545,9 +529,7 @@ class _CaregiverQuickActions extends StatelessWidget {
             ),
           ],
         ),
-
         const SizedBox(height: 12),
-
         _QuickActionCard(
           title: 'Add Appointment',
           subtitle: 'Schedule visit',
@@ -768,23 +750,14 @@ class _FamilyMedicationStatus extends StatelessWidget {
     return _SectionCard(
       title: 'Medication Status',
       actionText: 'View details',
+      onActionTap: () {
+        Navigator.pushNamed(context, AppRoutes.familyMedications);
+      },
       child: Column(
         children: [
-          _StatusLine(
-            label: 'Given',
-            count: givenCount,
-            color: AppColors.given,
-          ),
-          _StatusLine(
-            label: 'Pending',
-            count: pendingCount,
-            color: AppColors.pending,
-          ),
-          _StatusLine(
-            label: 'Missed',
-            count: missedCount,
-            color: AppColors.destructive,
-          ),
+          _StatusLine(label: 'Given', count: givenCount, color: AppColors.given),
+          _StatusLine(label: 'Pending', count: pendingCount, color: AppColors.pending),
+          _StatusLine(label: 'Missed', count: missedCount, color: AppColors.destructive),
         ],
       ),
     );
@@ -869,7 +842,6 @@ class _ComingSoonSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-
         StreamBuilder<List<AppointmentModel>>(
           stream: appointmentController.streamAppointments(),
           builder: (context, snapshot) {
@@ -906,18 +878,14 @@ class _ComingSoonSection extends StatelessWidget {
             }
 
             final now = DateTime.now();
-
             final upcomingAppointments = (snapshot.data ?? [])
                 .where(
-                  (appointment) =>
-                      !appointment.appointmentDateTime.isBefore(now) &&
-                      appointment.status != 'cancelled',
+                  (a) => !a.appointmentDateTime.isBefore(now) &&
+                      a.status != 'cancelled',
                 )
-                .toList();
-
-            upcomingAppointments.sort(
-              (a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime),
-            );
+                .toList()
+              ..sort((a, b) =>
+                  a.appointmentDateTime.compareTo(b.appointmentDateTime));
 
             final previewAppointments = upcomingAppointments.take(2).toList();
 
@@ -939,13 +907,11 @@ class _ComingSoonSection extends StatelessWidget {
 
             return Column(
               children: previewAppointments
-                  .map(
-                    (appointment) => AppointmentCard(
-                      appointment: appointment,
-                      onEdit: null,
-                      onDelete: null,
-                    ),
-                  )
+                  .map((a) => AppointmentCard(
+                        appointment: a,
+                        onEdit: null,
+                        onDelete: null,
+                      ))
                   .toList(),
             );
           },
@@ -970,46 +936,40 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.95,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: Text(title, style: AppTextStyles.h3)),
-              InkWell(
-                onTap: onActionTap,
-                borderRadius: BorderRadius.circular(20),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
-                  child: Text(
-                    actionText,
-                    style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.purple,
-                      fontWeight: FontWeight.w700,
-                    ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text(title, style: AppTextStyles.h3)),
+            InkWell(
+              onTap: onActionTap,
+              borderRadius: BorderRadius.circular(20),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Text(
+                  actionText,
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.purple,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              border: Border.all(color: AppColors.border),
             ),
-            child: child,
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppColors.border),
           ),
-        ],
-      ),
+          child: child,
+        ),
+      ],
     );
   }
 }
@@ -1031,20 +991,20 @@ class _BottomNavigation extends StatelessWidget {
       selectedFontSize: 11,
       unselectedFontSize: 11,
       onTap: (index) {
-        if (index == 1 && !isFamily) {
-          Navigator.pushNamed(context, AppRoutes.medications);
+        if (index == 1) {
+          Navigator.pushNamed(
+            context,
+            isFamily ? AppRoutes.familyMedications : AppRoutes.medications,
+          );
           return;
         }
-
-        if (index == 2 && isFamily) {
-          Navigator.pushNamed(context, AppRoutes.familyAppointments);
+        if (index == 2) {
+          Navigator.pushNamed(
+            context,
+            isFamily ? AppRoutes.familyAppointments : AppRoutes.appointments,
+          );
           return;
         }
-        if (index == 2 && !isFamily) {
-          Navigator.pushNamed(context, AppRoutes.appointments);
-          return;
-        }
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('This feature is coming in the next sprint.'),

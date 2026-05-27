@@ -50,19 +50,23 @@ class HomeScreen extends StatelessWidget {
 
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _medicationsStream({
     required bool isFamily,
+    required Map<String, dynamic> userData,
   }) {
     final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return const Stream.empty();
 
-    if (currentUser == null) {
+    final uid = currentUser.uid;
+
+    final queryField = isFamily ? 'patientId' : 'caregiverId';
+    final queryValue = isFamily ? userData['linkedCaregiverId'] : uid;
+
+    if (queryValue == null || queryValue.toString().isEmpty) {
       return const Stream.empty();
     }
 
-    final uid = currentUser.uid;
-    final userField = isFamily ? 'patientId' : 'caregiverId';
-
     return FirebaseFirestore.instance
         .collection('medications')
-        .where(userField, isEqualTo: uid)
+        .where(queryField, isEqualTo: queryValue)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.where((doc) {
@@ -106,7 +110,10 @@ class HomeScreen extends StatelessWidget {
         final isFamily = _isFamilyMember(role);
 
         return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
-          stream: _medicationsStream(isFamily: isFamily),
+          stream: _medicationsStream(
+            isFamily: isFamily,
+            userData: userData,
+          ),
           builder: (context, medicationSnapshot) {
             if (medicationSnapshot.hasError) {
               return Scaffold(
@@ -270,12 +277,18 @@ class _HeaderSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: Colors.white.withOpacity(0.22),
-                child: const Icon(
-                  Icons.notifications_none,
-                  color: AppColors.primaryFg,
+              InkWell(
+                borderRadius: BorderRadius.circular(50),
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.familyMedications);
+                },
+                child: CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.white.withOpacity(0.22),
+                  child: const Icon(
+                    Icons.notifications_none,
+                    color: AppColors.primaryFg,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -347,11 +360,6 @@ class _HeaderSection extends StatelessWidget {
                             label: isFamily ? 'Family Member' : 'Caregiver',
                             color: dark,
                           ),
-                          if (isFamily)
-                            const _UserTag(
-                              label: 'Temporary View',
-                              color: AppColors.purple,
-                            ),
                         ],
                       ),
                     ],
@@ -514,7 +522,6 @@ class _CaregiverQuickActions extends StatelessWidget {
       children: [
         Text('Quick Actions', style: AppTextStyles.h3),
         const SizedBox(height: 12),
-
         Row(
           children: [
             Expanded(
@@ -541,9 +548,7 @@ class _CaregiverQuickActions extends StatelessWidget {
             ),
           ],
         ),
-
         const SizedBox(height: 12),
-
         _QuickActionCard(
           title: 'Add Appointment',
           subtitle: 'Schedule visit',
@@ -764,6 +769,9 @@ class _FamilyMedicationStatus extends StatelessWidget {
     return _SectionCard(
       title: 'Medication Status',
       actionText: 'View details',
+      onActionTap: () {
+        Navigator.pushNamed(context, AppRoutes.familyMedications);
+      },
       child: Column(
         children: [
           _StatusLine(
@@ -849,7 +857,9 @@ class _ComingSoonSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: Text('Upcoming Appointments', style: AppTextStyles.h3)),
+            Expanded(
+              child: Text('Upcoming Appointments', style: AppTextStyles.h3),
+            ),
             InkWell(
               onTap: () {
                 Navigator.pushNamed(context, AppRoutes.appointments);
@@ -872,7 +882,6 @@ class _ComingSoonSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-
         StreamBuilder<List<AppointmentModel>>(
           stream: appointmentController.streamAppointments(),
           builder: (context, snapshot) {
@@ -919,7 +928,8 @@ class _ComingSoonSection extends StatelessWidget {
                 .toList();
 
             upcomingAppointments.sort(
-              (a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime),
+              (a, b) =>
+                  a.appointmentDateTime.compareTo(b.appointmentDateTime),
             );
 
             final previewAppointments = upcomingAppointments.take(2).toList();
@@ -957,6 +967,7 @@ class _ComingSoonSection extends StatelessWidget {
     );
   }
 }
+
 class _SectionCard extends StatelessWidget {
   final String title;
   final String actionText;
@@ -972,49 +983,47 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.95,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: Text(title, style: AppTextStyles.h3)),
-              InkWell(
-                onTap: onActionTap,
-                borderRadius: BorderRadius.circular(20),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
-                  child: Text(
-                    actionText,
-                    style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.purple,
-                      fontWeight: FontWeight.w700,
-                    ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text(title, style: AppTextStyles.h3)),
+            InkWell(
+              onTap: onActionTap,
+              borderRadius: BorderRadius.circular(20),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 6,
+                ),
+                child: Text(
+                  actionText,
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.purple,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              border: Border.all(color: AppColors.border),
             ),
-            child: child,
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppColors.border),
           ),
-        ],
-      ),
+          child: child,
+        ),
+      ],
     );
   }
 }
+
 class _BottomNavigation extends StatelessWidget {
   final bool isFamily;
 
@@ -1034,8 +1043,11 @@ class _BottomNavigation extends StatelessWidget {
       selectedFontSize: 11,
       unselectedFontSize: 11,
       onTap: (index) {
-        if (index == 1 && !isFamily) {
-          Navigator.pushNamed(context, AppRoutes.medications);
+        if (index == 1) {
+          Navigator.pushNamed(
+            context,
+            isFamily ? AppRoutes.familyMedications : AppRoutes.medications,
+          );
           return;
         }
 

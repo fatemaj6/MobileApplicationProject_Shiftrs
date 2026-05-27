@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_routes.dart';
 import 'data/repositories/profile_repository.dart';
+import 'data/services/notification_service.dart';
 import 'features/medication/controllers/medication_controller.dart';
 import 'routes.dart';
 import 'firebase_options.dart';
@@ -15,6 +16,8 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await NotificationService.init();
 
   runApp(
     MultiProvider(
@@ -40,8 +43,6 @@ class CareConnectApp extends StatelessWidget {
       title: 'CareConnect',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-
-      // App opens from welcome / role selection flow
       initialRoute: AppRoutes.welcome,
       routes: appRoutes,
     );

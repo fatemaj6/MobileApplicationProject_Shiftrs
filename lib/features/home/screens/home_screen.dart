@@ -6,6 +6,9 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/routes/app_routes.dart';
+import '../../appointments/controllers/appointment_controller.dart';
+import '../../appointments/models/appointment_model.dart';
+import '../../appointments/widgets/appointment_card.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -46,32 +49,32 @@ class HomeScreen extends StatelessWidget {
   }
 
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _medicationsStream({
-  required bool isFamily,
-  required Map<String, dynamic> userData,
-}) {
-  final currentUser = FirebaseAuth.instance.currentUser;
-  if (currentUser == null) return const Stream.empty();
+    required bool isFamily,
+    required Map<String, dynamic> userData,
+  }) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return const Stream.empty();
 
-  final uid = currentUser.uid;
+    final uid = currentUser.uid;
 
-  final queryField = isFamily ? 'patientId' : 'caregiverId';
-  final queryValue = isFamily ? userData['linkedCaregiverId'] : uid;
+    final queryField = isFamily ? 'patientId' : 'caregiverId';
+    final queryValue = isFamily ? userData['linkedCaregiverId'] : uid;
 
-  if (queryValue == null || queryValue.toString().isEmpty) {
-    return const Stream.empty();
+    if (queryValue == null || queryValue.toString().isEmpty) {
+      return const Stream.empty();
+    }
+
+    return FirebaseFirestore.instance
+        .collection('medications')
+        .where(queryField, isEqualTo: queryValue)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.where((doc) {
+        final data = doc.data();
+        return data['isDeleted'] != true;
+      }).toList();
+    });
   }
-
-  return FirebaseFirestore.instance
-      .collection('medications')
-      .where(queryField, isEqualTo: queryValue)
-      .snapshots()
-      .map((snapshot) {
-    return snapshot.docs.where((doc) {
-      final data = doc.data();
-      return data['isDeleted'] != true;
-    }).toList();
-  });
-}
 
   @override
   Widget build(BuildContext context) {
@@ -108,9 +111,9 @@ class HomeScreen extends StatelessWidget {
 
         return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
           stream: _medicationsStream(
-          isFamily: isFamily,
-          userData: userData,
-        ),
+            isFamily: isFamily,
+            userData: userData,
+          ),
           builder: (context, medicationSnapshot) {
             if (medicationSnapshot.hasError) {
               return Scaffold(
@@ -247,68 +250,63 @@ class _HeaderSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-  children: [
-    Expanded(
-      child: Text(
-        isFamily ? 'Family Dashboard' : 'Good morning',
-        style: AppTextStyles.secondarySm.copyWith(
-          color: Colors.white70,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    ),
-
-    InkWell(
-      borderRadius: BorderRadius.circular(50),
-      onTap: () {
-        Navigator.pushNamed(context, AppRoutes.profile);
-      },
-      child: CircleAvatar(
-        radius: 22,
-        backgroundColor: Colors.white.withOpacity(0.22),
-        child: Text(
-          _initial,
-          style: AppTextStyles.h4.copyWith(
-            color: AppColors.primaryFg,
+            children: [
+              Expanded(
+                child: Text(
+                  isFamily ? 'Family Dashboard' : 'Good morning',
+                  style: AppTextStyles.secondarySm.copyWith(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              InkWell(
+                borderRadius: BorderRadius.circular(50),
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.profile);
+                },
+                child: CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.white.withOpacity(0.22),
+                  child: Text(
+                    _initial,
+                    style: AppTextStyles.h4.copyWith(
+                      color: AppColors.primaryFg,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              InkWell(
+                borderRadius: BorderRadius.circular(50),
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.familyMedications);
+                },
+                child: CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.white.withOpacity(0.22),
+                  child: const Icon(
+                    Icons.notifications_none,
+                    color: AppColors.primaryFg,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              InkWell(
+                borderRadius: BorderRadius.circular(50),
+                onTap: onLogout,
+                child: CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.white.withOpacity(0.22),
+                  child: const Icon(
+                    Icons.logout,
+                    color: AppColors.primaryFg,
+                    size: 22,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-      ),
-    ),
-
-    const SizedBox(width: 10),
-
-    InkWell(
-      borderRadius: BorderRadius.circular(50),
-      onTap: () {
-        Navigator.pushNamed(context, AppRoutes.familyMedications);
-      },
-      child: CircleAvatar(
-        radius: 22,
-        backgroundColor: Colors.white.withOpacity(0.22),
-        child: const Icon(
-          Icons.notifications_none,
-          color: AppColors.primaryFg,
-        ),
-      ),
-    ),
-
-    const SizedBox(width: 10),
-
-    InkWell(
-      borderRadius: BorderRadius.circular(50),
-      onTap: onLogout,
-      child: CircleAvatar(
-        radius: 22,
-        backgroundColor: Colors.white.withOpacity(0.22),
-        child: const Icon(
-          Icons.logout,
-          color: AppColors.primaryFg,
-          size: 22,
-        ),
-      ),
-    ),
-  ],
-),
           const SizedBox(height: 8),
           Text(
             isFamily ? 'Care Overview' : 'Care Dashboard',
@@ -517,6 +515,8 @@ class _CaregiverQuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final caregiverId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -540,13 +540,27 @@ class _CaregiverQuickActions extends StatelessWidget {
               child: _QuickActionCard(
                 title: 'Add Care Note',
                 subtitle: 'Next sprint',
-                icon: Icons.add,
+                icon: Icons.note_add_outlined,
                 isPrimary: false,
                 isDisabled: true,
                 onTap: () {},
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+        _QuickActionCard(
+          title: 'Add Appointment',
+          subtitle: 'Schedule visit',
+          icon: Icons.calendar_month_outlined,
+          isPrimary: false,
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.addAppointment,
+              arguments: caregiverId,
+            );
+          },
         ),
       ],
     );
@@ -824,13 +838,132 @@ class _ComingSoonSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SectionCard(
-      title: isFamily ? 'Recent Activity' : 'Upcoming Appointments',
-      actionText: 'View all',
-      child: Text(
-        'This section will be available in the next sprint.',
-        style: AppTextStyles.secondarySm,
-      ),
+    if (isFamily) {
+      return _SectionCard(
+        title: 'Recent Activity',
+        actionText: 'View all',
+        onActionTap: () {},
+        child: Text(
+          'This section will be available in the next sprint.',
+          style: AppTextStyles.secondarySm,
+        ),
+      );
+    }
+
+    final appointmentController = AppointmentController();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text('Upcoming Appointments', style: AppTextStyles.h3),
+            ),
+            InkWell(
+              onTap: () {
+                Navigator.pushNamed(context, AppRoutes.appointments);
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 6,
+                ),
+                child: Text(
+                  'View all',
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.purple,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<List<AppointmentModel>>(
+          stream: appointmentController.streamAppointments(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  'Loading appointments...',
+                  style: AppTextStyles.secondarySm,
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  'Unable to load appointments.',
+                  style: AppTextStyles.secondarySm,
+                ),
+              );
+            }
+
+            final now = DateTime.now();
+
+            final upcomingAppointments = (snapshot.data ?? [])
+                .where(
+                  (appointment) =>
+                      !appointment.appointmentDateTime.isBefore(now) &&
+                      appointment.status != 'cancelled',
+                )
+                .toList();
+
+            upcomingAppointments.sort(
+              (a, b) =>
+                  a.appointmentDateTime.compareTo(b.appointmentDateTime),
+            );
+
+            final previewAppointments = upcomingAppointments.take(2).toList();
+
+            if (previewAppointments.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  'No upcoming appointments yet.',
+                  style: AppTextStyles.secondarySm,
+                ),
+              );
+            }
+
+            return Column(
+              children: previewAppointments
+                  .map(
+                    (appointment) => AppointmentCard(
+                      appointment: appointment,
+                      onEdit: null,
+                      onDelete: null,
+                    ),
+                  )
+                  .toList(),
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -838,8 +971,8 @@ class _ComingSoonSection extends StatelessWidget {
 class _SectionCard extends StatelessWidget {
   final String title;
   final String actionText;
-  final Widget child;
   final VoidCallback? onActionTap;
+  final Widget child;
 
   const _SectionCard({
     required this.title,
@@ -858,11 +991,18 @@ class _SectionCard extends StatelessWidget {
             Expanded(child: Text(title, style: AppTextStyles.h3)),
             InkWell(
               onTap: onActionTap,
-              child: Text(
-                actionText,
-                style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.purple,
-                  fontWeight: FontWeight.w700,
+              borderRadius: BorderRadius.circular(20),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 6,
+                ),
+                child: Text(
+                  actionText,
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.purple,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -877,7 +1017,7 @@ class _SectionCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(color: AppColors.border),
           ),
-          child: IgnorePointer(child: child),
+          child: child,
         ),
       ],
     );
@@ -908,6 +1048,11 @@ class _BottomNavigation extends StatelessWidget {
             context,
             isFamily ? AppRoutes.familyMedications : AppRoutes.medications,
           );
+          return;
+        }
+
+        if (index == 2 && !isFamily) {
+          Navigator.pushNamed(context, AppRoutes.appointments);
           return;
         }
 

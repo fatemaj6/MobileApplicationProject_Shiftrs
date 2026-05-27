@@ -26,4 +26,10 @@ class AppRoutes {
   static const String reports        = '/reports';
   static const String aiAssistant    = '/ai-assistant';
   static const String profile        = '/profile';
+
+
+  // Appointment routes
+
+static const String addAppointment = '/appointments/add';
+static const String editAppointment = '/appointments/edit';
 }

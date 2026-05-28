@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/appointment_model.dart';
+import '../../../data/services/google_calendar_service.dart'; // ← ADD
 import 'appointment_action_menu.dart';
 import 'delete_appointment_dialog.dart';
 
@@ -51,6 +52,42 @@ class AppointmentCard extends StatelessWidget {
 
   bool get _isUpcoming =>
       !appointment.isPast && appointment.status != 'cancelled';
+
+  // ── SMAP-26: sync to Google Calendar ─────────────────────────────────────
+
+  Future<void> _syncToGoogleCalendar(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Syncing to Google Calendar...')),
+    );
+
+    final eventId = await GoogleCalendarService.syncAppointment(
+      title: appointment.title,
+      description: appointment.notes.isNotEmpty
+          ? appointment.notes
+          : '${appointment.specialty} with ${appointment.doctorName}',
+      startTime: appointment.appointmentDateTime,
+    );
+
+    if (eventId != null) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('✅ Synced to Google Calendar'),
+          backgroundColor: Color(0xFF16A34A),
+        ),
+      );
+    } else {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('❌ Sync cancelled or failed'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,13 +157,13 @@ class AppointmentCard extends StatelessWidget {
                   AppointmentActionMenu(
                     onEdit: onEdit!,
                     onDelete: () => _showDeleteDialog(context),
+                    onSyncCalendar: () => _syncToGoogleCalendar(context), // ← ADD
                   ),
               ],
             ),
 
             const SizedBox(height: 10),
 
-            // Doctor name
             if (appointment.doctorName.trim().isNotEmpty) ...[
               _infoRow(
                 icon: Icons.person_outline,
@@ -136,7 +173,6 @@ class AppointmentCard extends StatelessWidget {
               const SizedBox(height: 6),
             ],
 
-            // Specialty
             if (appointment.specialty.trim().isNotEmpty) ...[
               _infoRow(
                 icon: Icons.medical_services_outlined,

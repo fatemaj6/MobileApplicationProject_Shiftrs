@@ -27,11 +27,11 @@ class GoogleCalendarService {
         ..summary = title
         ..description = description
         ..start = gcal.EventDateTime(
-          dateTime: startTime,
+          dateTime: startTime.toUtc(),
           timeZone: 'Asia/Kuala_Lumpur',
         )
         ..end = gcal.EventDateTime(
-          dateTime: startTime.add(duration),
+          dateTime: startTime.add(duration).toUtc(),
           timeZone: 'Asia/Kuala_Lumpur',
         )
         ..reminders = gcal.EventReminders(
@@ -51,10 +51,63 @@ class GoogleCalendarService {
     }
   }
 
-  static Future<void> deleteEvent(String googleEventId) async {
+  static Future<String?> updateEvent({
+    required String googleEventId,
+    required String title,
+    required String description,
+    required DateTime startTime,
+    Duration duration = const Duration(hours: 1),
+  }) async {
     try {
       final account = await _googleSignIn.signInSilently();
-      if (account == null) return;
+      if (account == null) return null;
+
+      final authHeaders = await account.authHeaders;
+      final client = _AuthenticatedClient(http.Client(), authHeaders);
+      final calendarApi = gcal.CalendarApi(client);
+
+      final event = gcal.Event()
+        ..summary = title
+        ..description = description
+        ..start = gcal.EventDateTime(
+          dateTime: startTime.toUtc(),
+          timeZone: 'Asia/Kuala_Lumpur',
+        )
+        ..end = gcal.EventDateTime(
+          dateTime: startTime.add(duration).toUtc(),
+          timeZone: 'Asia/Kuala_Lumpur',
+        )
+        ..reminders = gcal.EventReminders(
+          useDefault: false,
+          overrides: [
+            gcal.EventReminder(method: 'popup', minutes: 30),
+            gcal.EventReminder(method: 'email', minutes: 60),
+          ],
+        );
+
+      try {
+        await calendarApi.events.update(event, 'primary', googleEventId);
+        client.close();
+        return googleEventId;
+      } catch (e) {
+        if (e.toString().contains('404') || e.toString().contains('notFound')) {
+          debugPrint('Event not found on Google Calendar. Re-creating event.');
+          final createdEvent = await calendarApi.events.insert(event, 'primary');
+          client.close();
+          return createdEvent.id;
+        }
+        rethrow;
+      }
+    } catch (e) {
+      debugPrint('Google Calendar update failed: $e');
+      return null;
+    }
+  }
+
+  static Future<bool> deleteEvent(String googleEventId) async {
+    try {
+      final account = await _googleSignIn.signInSilently();
+      if (account == null) return false;
 
       final authHeaders = await account.authHeaders;
       final client = _AuthenticatedClient(http.Client(), authHeaders);
@@ -62,8 +115,13 @@ class GoogleCalendarService {
 
       await calendarApi.events.delete('primary', googleEventId);
       client.close();
+      return true;
     } catch (e) {
       debugPrint('Google Calendar delete failed: $e');
+      if (e.toString().contains('404') || e.toString().contains('notFound')) {
+        return true;
+      }
+      return false;
     }
   }
 

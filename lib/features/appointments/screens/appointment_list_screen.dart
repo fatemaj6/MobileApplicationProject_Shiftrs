@@ -16,6 +16,12 @@ class AppointmentListScreen extends StatefulWidget {
 class _AppointmentListScreenState extends State<AppointmentListScreen> {
   final AppointmentController _controller = AppointmentController();
 
+  @override
+  void initState() {
+    super.initState();
+    _controller.processPendingCalendarSyncs();
+  }
+
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

@@ -71,4 +71,23 @@ class AppointmentRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
+
+  /// Get a single appointment by ID.
+  Future<AppointmentModel?> getAppointment(String appointmentId) async {
+    final doc = await _firestore.collection(_collection).doc(appointmentId).get();
+    if (!doc.exists) return null;
+    return AppointmentModel.fromFirestore(doc);
+  }
+
+  /// Get all appointments for caregiver including soft-deleted ones.
+  Future<List<AppointmentModel>> getAppointmentsIncludingDeleted(String caregiverId) async {
+    final snapshot = await _firestore
+        .collection(_collection)
+        .where('caregiverId', isEqualTo: caregiverId)
+        .get();
+
+    return snapshot.docs
+        .map((doc) => AppointmentModel.fromFirestore(doc))
+        .toList();
+  }
 }

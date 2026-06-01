@@ -4,6 +4,8 @@ import '../models/appointment_model.dart';
 import '../repositories/appointment_repository.dart';
 import '../../../data/services/notification_service.dart';
 import '../../../data/services/fcm_service.dart'; // ← ADD
+import '../../../data/services/google_calendar_service.dart';
+
 
 class AppointmentController extends ChangeNotifier {
   final AppointmentRepository _repository = AppointmentRepository();
@@ -56,22 +58,60 @@ class AppointmentController extends ChangeNotifier {
   Future<bool> updateAppointment(AppointmentModel appointment) async {
     _setLoading(true);
     try {
-      await _repository.updateAppointment(appointment);
+      final oldAppointment = await _repository.getAppointment(appointment.id);
+      AppointmentModel appointmentToSave = appointment;
+
+      if (oldAppointment != null) {
+        final detailsChanged = oldAppointment.title != appointment.title ||
+            oldAppointment.notes != appointment.notes ||
+            oldAppointment.appointmentDateTime != appointment.appointmentDateTime ||
+            oldAppointment.doctorName != appointment.doctorName ||
+            oldAppointment.specialty != appointment.specialty ||
+            oldAppointment.clinicName != appointment.clinicName ||
+            oldAppointment.appointmentType != appointment.appointmentType;
+
+        if (detailsChanged && oldAppointment.googleEventId != null && oldAppointment.googleEventId!.isNotEmpty) {
+          final description = appointment.notes.isNotEmpty
+              ? appointment.notes
+              : '${appointment.specialty} with ${appointment.doctorName}';
+
+          final eventId = await GoogleCalendarService.updateEvent(
+            googleEventId: oldAppointment.googleEventId!,
+            title: appointment.title,
+            description: description,
+            startTime: appointment.appointmentDateTime,
+          );
+
+          if (eventId != null) {
+            appointmentToSave = appointment.copyWith(
+              googleEventId: eventId,
+              googleEventSyncState: 'synced',
+            );
+          } else {
+            // Failed due to offline or token expiry, mark for update retry
+            appointmentToSave = appointment.copyWith(
+              googleEventSyncState: 'pending_update',
+            );
+          }
+        }
+      }
+
+      await _repository.updateAppointment(appointmentToSave);
 
       // SMAP-28: reschedule local reminder
       await NotificationService.cancelAppointmentReminder(
-        appointment.id.hashCode,
+        appointmentToSave.id.hashCode,
       );
-      await _scheduleReminder(appointment);
+      await _scheduleReminder(appointmentToSave);
 
       // FCM: notify patient + family of updated time
-      if (appointment.patientId != null) {
+      if (appointmentToSave.patientId != null) {
         await FcmService.notifyAppointment(
-          patientId: appointment.patientId!,
-          appointmentTitle: appointment.title,
-          doctorName: appointment.doctorName,
-          appointmentDateTime: appointment.appointmentDateTime,
-          appointmentId: appointment.id,
+          patientId: appointmentToSave.patientId!,
+          appointmentTitle: appointmentToSave.title,
+          doctorName: appointmentToSave.doctorName,
+          appointmentDateTime: appointmentToSave.appointmentDateTime,
+          appointmentId: appointmentToSave.id,
         );
       }
 
@@ -89,6 +129,25 @@ class AppointmentController extends ChangeNotifier {
 
   Future<bool> deleteAppointment(String appointmentId) async {
     try {
+      final appointment = await _repository.getAppointment(appointmentId);
+      
+      if (appointment != null &&
+          appointment.googleEventId != null &&
+          appointment.googleEventId!.isNotEmpty) {
+        final success = await GoogleCalendarService.deleteEvent(appointment.googleEventId!);
+        
+        if (success) {
+          await _repository.updateAppointment(appointment.copyWith(
+            googleEventSyncState: 'synced',
+          ));
+        } else {
+          // Failed (offline), mark for delete retry
+          await _repository.updateAppointment(appointment.copyWith(
+            googleEventSyncState: 'pending_delete',
+          ));
+        }
+      }
+
       await _repository.deleteAppointment(appointmentId);
 
       await NotificationService.cancelAppointmentReminder(
@@ -100,6 +159,55 @@ class AppointmentController extends ChangeNotifier {
       errorMessage = 'Failed to delete appointment: $e';
       notifyListeners();
       return false;
+    }
+  }
+
+  // ─── Offline/Background Sync Reconciler ────────────────────────────────────
+
+  bool isLoadingPendingSyncs = false;
+
+  Future<void> processPendingCalendarSyncs() async {
+    if (caregiverId.isEmpty || isLoadingPendingSyncs) return;
+    isLoadingPendingSyncs = true;
+
+    try {
+      final appointments = await _repository.getAppointmentsIncludingDeleted(caregiverId);
+      for (final appt in appointments) {
+        if (appt.googleEventId == null || appt.googleEventId!.isEmpty) continue;
+
+        if (appt.googleEventSyncState == 'pending_update') {
+          final description = appt.notes.isNotEmpty
+              ? appt.notes
+              : '${appt.specialty} with ${appt.doctorName}';
+
+          final eventId = await GoogleCalendarService.updateEvent(
+            googleEventId: appt.googleEventId!,
+            title: appt.title,
+            description: description,
+            startTime: appt.appointmentDateTime,
+          );
+
+          if (eventId != null) {
+            await _repository.updateAppointment(
+              appt.copyWith(
+                googleEventId: eventId,
+                googleEventSyncState: 'synced',
+              ),
+            );
+          }
+        } else if (appt.googleEventSyncState == 'pending_delete') {
+          final success = await GoogleCalendarService.deleteEvent(appt.googleEventId!);
+          if (success) {
+            await _repository.updateAppointment(
+              appt.copyWith(googleEventSyncState: 'synced'),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error processing pending calendar syncs: $e');
+    } finally {
+      isLoadingPendingSyncs = false;
     }
   }
 

@@ -16,6 +16,8 @@ class AppointmentModel {
   final bool isDeleted;
   final Timestamp? createdAt;
   final Timestamp? updatedAt;
+  final String? googleEventId;
+  final String? googleEventSyncState;
 
   AppointmentModel({
     required this.id,
@@ -32,6 +34,8 @@ class AppointmentModel {
     this.isDeleted = false,
     this.createdAt,
     this.updatedAt,
+    this.googleEventId,
+    this.googleEventSyncState,
   });
 
   /// True if the appointment date/time is before now
@@ -85,6 +89,8 @@ class AppointmentModel {
       isDeleted: data['isDeleted'] ?? false,
       createdAt: data['createdAt'] as Timestamp?,
       updatedAt: data['updatedAt'] as Timestamp?,
+      googleEventId: data['googleEventId'] as String?,
+      googleEventSyncState: data['googleEventSyncState'] as String?,
     );
   }
 
@@ -103,6 +109,8 @@ class AppointmentModel {
       'isDeleted': isDeleted,
       'createdAt': createdAt ?? FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
+      'googleEventId': googleEventId,
+      'googleEventSyncState': googleEventSyncState,
     };
   }
 
@@ -121,6 +129,8 @@ class AppointmentModel {
     bool? isDeleted,
     Timestamp? createdAt,
     Timestamp? updatedAt,
+    String? googleEventId,
+    String? googleEventSyncState,
   }) {
     return AppointmentModel(
       id: id ?? this.id,
@@ -137,6 +147,8 @@ class AppointmentModel {
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      googleEventId: googleEventId ?? this.googleEventId,
+      googleEventSyncState: googleEventSyncState ?? this.googleEventSyncState,
     );
   }
 }

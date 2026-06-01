@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/appointment_model.dart';
+import '../controllers/appointment_controller.dart';
 import '../../../data/services/google_calendar_service.dart'; // ← ADD
 import 'appointment_action_menu.dart';
 import 'delete_appointment_dialog.dart';
+
 
 class AppointmentCard extends StatelessWidget {
   final AppointmentModel appointment;
@@ -57,20 +60,40 @@ class AppointmentCard extends StatelessWidget {
 
   Future<void> _syncToGoogleCalendar(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
+    final controller = Provider.of<AppointmentController>(context, listen: false);
 
     messenger.showSnackBar(
       const SnackBar(content: Text('Syncing to Google Calendar...')),
     );
 
-    final eventId = await GoogleCalendarService.syncAppointment(
-      title: appointment.title,
-      description: appointment.notes.isNotEmpty
-          ? appointment.notes
-          : '${appointment.specialty} with ${appointment.doctorName}',
-      startTime: appointment.appointmentDateTime,
-    );
+    final description = appointment.notes.isNotEmpty
+        ? appointment.notes
+        : '${appointment.specialty} with ${appointment.doctorName}';
+
+    String? eventId;
+    if (appointment.googleEventId != null && appointment.googleEventId!.isNotEmpty) {
+      eventId = await GoogleCalendarService.updateEvent(
+        googleEventId: appointment.googleEventId!,
+        title: appointment.title,
+        description: description,
+        startTime: appointment.appointmentDateTime,
+      );
+    } else {
+      eventId = await GoogleCalendarService.syncAppointment(
+        title: appointment.title,
+        description: description,
+        startTime: appointment.appointmentDateTime,
+      );
+    }
 
     if (eventId != null) {
+      final updatedAppt = appointment.copyWith(
+        googleEventId: eventId,
+        googleEventSyncState: 'synced',
+      );
+      
+      await controller.updateAppointment(updatedAppt);
+
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         const SnackBar(

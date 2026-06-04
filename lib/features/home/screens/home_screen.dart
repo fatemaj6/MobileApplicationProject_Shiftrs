@@ -520,11 +520,12 @@ class _CaregiverQuickActions extends StatelessWidget {
             Expanded(
               child: _QuickActionCard(
                 title: 'Add Care Note',
-                subtitle: 'Next sprint',
+                subtitle: 'Log daily record',
                 icon: Icons.note_add_outlined,
                 isPrimary: false,
-                isDisabled: true,
-                onTap: () {},
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.careNotes);
+                },
               ),
             ),
           ],
@@ -755,9 +756,21 @@ class _FamilyMedicationStatus extends StatelessWidget {
       },
       child: Column(
         children: [
-          _StatusLine(label: 'Given', count: givenCount, color: AppColors.given),
-          _StatusLine(label: 'Pending', count: pendingCount, color: AppColors.pending),
-          _StatusLine(label: 'Missed', count: missedCount, color: AppColors.destructive),
+          _StatusLine(
+            label: 'Given',
+            count: givenCount,
+            color: AppColors.given,
+          ),
+          _StatusLine(
+            label: 'Pending',
+            count: pendingCount,
+            color: AppColors.pending,
+          ),
+          _StatusLine(
+            label: 'Missed',
+            count: missedCount,
+            color: AppColors.destructive,
+          ),
         ],
       ),
     );
@@ -878,14 +891,18 @@ class _ComingSoonSection extends StatelessWidget {
             }
 
             final now = DateTime.now();
-            final upcomingAppointments = (snapshot.data ?? [])
-                .where(
-                  (a) => !a.appointmentDateTime.isBefore(now) &&
-                      a.status != 'cancelled',
-                )
-                .toList()
-              ..sort((a, b) =>
-                  a.appointmentDateTime.compareTo(b.appointmentDateTime));
+            final upcomingAppointments =
+                (snapshot.data ?? [])
+                    .where(
+                      (a) =>
+                          !a.appointmentDateTime.isBefore(now) &&
+                          a.status != 'cancelled',
+                    )
+                    .toList()
+                  ..sort(
+                    (a, b) =>
+                        a.appointmentDateTime.compareTo(b.appointmentDateTime),
+                  );
 
             final previewAppointments = upcomingAppointments.take(2).toList();
 
@@ -907,11 +924,13 @@ class _ComingSoonSection extends StatelessWidget {
 
             return Column(
               children: previewAppointments
-                  .map((a) => AppointmentCard(
-                        appointment: a,
-                        onEdit: null,
-                        onDelete: null,
-                      ))
+                  .map(
+                    (a) => AppointmentCard(
+                      appointment: a,
+                      onEdit: null,
+                      onDelete: null,
+                    ),
+                  )
                   .toList(),
             );
           },
@@ -1003,6 +1022,10 @@ class _BottomNavigation extends StatelessWidget {
             context,
             isFamily ? AppRoutes.familyAppointments : AppRoutes.appointments,
           );
+          return;
+        }
+        if (index == 3) {
+          Navigator.pushNamed(context, AppRoutes.careNotes);
           return;
         }
         ScaffoldMessenger.of(context).showSnackBar(

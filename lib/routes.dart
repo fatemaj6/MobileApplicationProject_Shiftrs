@@ -17,6 +17,9 @@ import 'features/appointments/screens/edit_appointment_screen.dart';
 import 'features/appointments/models/appointment_model.dart';
 import 'features/appointments/screens/family_appointment_list_screen.dart';
 import 'features/notifications/screens/appointment_notifications_screen.dart';
+// Care Note screens
+import 'features/care_notes/screens/care_note_list_screen.dart';
+import 'features/care_notes/screens/add_care_note_screen.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
   AppRoutes.welcome: (ctx) => const WelcomeScreen(),
@@ -42,5 +45,9 @@ final Map<String, WidgetBuilder> appRoutes = {
     return EditAppointmentScreen(appointment: appointment);
   },
   AppRoutes.familyAppointments: (ctx) => const FamilyAppointmentListScreen(),
-  AppRoutes.familyNotifications: (ctx) => const AppointmentNotificationsScreen(),
+  AppRoutes.familyNotifications: (ctx) =>
+      const AppointmentNotificationsScreen(),
+  // Care Note routes
+  AppRoutes.careNotes: (ctx) => const CareNoteListScreen(),
+  AppRoutes.addCareNote: (ctx) => const AddCareNoteScreen(),
 };

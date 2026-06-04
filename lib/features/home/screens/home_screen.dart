@@ -554,7 +554,6 @@ class _QuickActionCard extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final bool isPrimary;
-  final bool isDisabled;
   final VoidCallback onTap;
 
   const _QuickActionCard({
@@ -563,7 +562,6 @@ class _QuickActionCard extends StatelessWidget {
     required this.icon,
     required this.isPrimary,
     required this.onTap,
-    this.isDisabled = false,
   });
 
   @override
@@ -576,51 +574,47 @@ class _QuickActionCard extends StatelessWidget {
         : AppColors.purpleBg;
     final iconColor = isPrimary ? AppColors.primaryFg : AppColors.purple;
 
-    return Opacity(
-      opacity: isDisabled ? 0.55 : 1,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        onTap: isDisabled ? null : onTap,
-        child: Container(
-          height: 112,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(
-              color: isPrimary ? Colors.transparent : AppColors.border,
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: Container(
+        height: 112,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(
+            color: isPrimary ? Colors.transparent : AppColors.border,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.035),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.035),
-                blurRadius: 12,
-                offset: const Offset(0, 5),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: iconBg,
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const Spacer(),
+            Text(
+              title,
+              style: AppTextStyles.bodyMd.copyWith(
+                fontWeight: FontWeight.w800,
+                color: textColor,
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: iconBg,
-                child: Icon(icon, color: iconColor, size: 20),
-              ),
-              const Spacer(),
-              Text(
-                title,
-                style: AppTextStyles.bodyMd.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                style: AppTextStyles.bodySm.copyWith(color: subColor),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              subtitle,
+              style: AppTextStyles.bodySm.copyWith(color: subColor),
+            ),
+          ],
         ),
       ),
     );

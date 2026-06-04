@@ -129,9 +129,6 @@ class _EditCareNoteScreenState extends State<EditCareNoteScreen> {
     return null;
   }
 
-  String _dateText() =>
-      '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}';
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -320,52 +317,6 @@ class _EditCareNoteScreenState extends State<EditCareNoteScreen> {
         borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: AppColors.primary),
       ),
-    );
-  }
-
-  Widget _buildPickerTile({
-    required String label,
-    required String value,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.textLabel,
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-          ),
-        ),
-        const SizedBox(height: 7),
-        InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    value,
-                    style: const TextStyle(color: AppColors.foreground),
-                  ),
-                ),
-                Icon(icon, color: AppColors.primary, size: 18),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

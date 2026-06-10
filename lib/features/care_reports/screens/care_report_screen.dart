@@ -33,6 +33,13 @@ class _CareReportScreenState extends State<CareReportScreen> {
   DateTime? _endDate;
   bool _reportGenerated = false;
   bool _isPdfLoading = false;
+  String _selectedCategory = 'All';
+
+final List<String> _categories = [
+  'All',
+  'Appointments',
+  'Medications',
+];
 
   // ─── Date pickers ─────────────────────────────────────────────────────────
 
@@ -80,10 +87,11 @@ class _CareReportScreenState extends State<CareReportScreen> {
     }
     setState(() => _reportGenerated = false);
     final ok = await _controller.generateReport(
-      startDate: _startDate!,
-      endDate: _endDate!,
-      linkedCaregiverId: widget.linkedCaregiverId,
-    );
+  startDate: _startDate!,
+  endDate: _endDate!,
+  linkedCaregiverId: widget.linkedCaregiverId,
+  selectedCategory: _selectedCategory,
+);
     if (mounted) {
       setState(() => _reportGenerated = ok);
       if (!ok) {
@@ -296,7 +304,42 @@ class _CareReportScreenState extends State<CareReportScreen> {
               ),
             ],
           ),
+                    const SizedBox(height: 18),
+
+          Text('Category Filter', style: AppTextStyles.h4),
+          const SizedBox(height: 10),
+
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _categories.map((category) {
+              final isSelected = _selectedCategory == category;
+
+              return ChoiceChip(
+                label: Text(category),
+                selected: isSelected,
+                onSelected: (_) {
+                  setState(() {
+                    _selectedCategory = category;
+                  });
+                },
+                selectedColor: AppColors.purple.withOpacity(0.16),
+                backgroundColor: AppColors.background,
+                side: BorderSide(
+                  color: isSelected ? AppColors.purple : AppColors.border,
+                ),
+                labelStyle: AppTextStyles.bodySm.copyWith(
+                  color: isSelected
+                      ? AppColors.purple
+                      : AppColors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              );
+            }).toList(),
+          ),
+
           const SizedBox(height: 16),
+
           SizedBox(
             width: double.infinity,
             height: 50,
@@ -512,10 +555,18 @@ class _ReportView extends StatelessWidget {
           _EmptyReport(),
         ] else ...[
           const SizedBox(height: 20),
-          _MedicationSummarySection(report: report),
-          const SizedBox(height: 20),
-          _AppointmentSummarySection(report: report),
-          if (report.medications.isNotEmpty) ...[
+
+if (report.medications.isNotEmpty) ...[
+  _MedicationSummarySection(report: report),
+  const SizedBox(height: 20),
+],
+
+if (report.appointments.isNotEmpty) ...[
+  _AppointmentSummarySection(report: report),
+  const SizedBox(height: 20),
+],
+
+if (report.medications.isNotEmpty) ...[
             const SizedBox(height: 20),
             _MedicationDetailSection(medications: report.medications),
           ],

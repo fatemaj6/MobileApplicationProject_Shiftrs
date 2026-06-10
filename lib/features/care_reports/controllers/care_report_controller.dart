@@ -30,10 +30,11 @@ class CareReportController extends ChangeNotifier {
   /// Appointments are filtered by [appointmentDateTime].
   /// Medications are filtered by [createdAt] (when the record was created).
   Future<bool> generateReport({
-    required DateTime startDate,
-    required DateTime endDate,
-    String? linkedCaregiverId,
-  }) async {
+  required DateTime startDate,
+  required DateTime endDate,
+  String? linkedCaregiverId,
+  String selectedCategory = 'All',
+}) async {
     if (_uid.isEmpty) {
       errorMessage = 'You must be logged in to generate a report.';
       notifyListeners();
@@ -71,12 +72,17 @@ class CareReportController extends ChangeNotifier {
       final medications = results[1] as List<MedicationModel>;
 
       report = CareReportModel(
-        startDate: from,
-        endDate: to,
-        generatedBy: targetId,
-        appointments: appointments,
-        medications: medications,
-      );
+  startDate: from,
+  endDate: to,
+  generatedBy: targetId,
+  selectedCategory: selectedCategory,
+  appointments: selectedCategory == 'Appointments' || selectedCategory == 'All'
+      ? appointments
+      : [],
+  medications: selectedCategory == 'Medications' || selectedCategory == 'All'
+      ? medications
+      : [],
+);
 
       notifyListeners();
       return true;

@@ -11,7 +11,16 @@ import '../../../features/appointments/models/appointment_model.dart';
 import '../../../data/model/medication_model.dart';
 
 class CareReportScreen extends StatefulWidget {
-  const CareReportScreen({super.key});
+  /// When opened by a family member, pass [isFamily] = true and the
+  /// [linkedCaregiverId] so the report fetches the caregiver's data.
+  const CareReportScreen({
+    super.key,
+    this.isFamily = false,
+    this.linkedCaregiverId,
+  });
+
+  final bool isFamily;
+  final String? linkedCaregiverId;
 
   @override
   State<CareReportScreen> createState() => _CareReportScreenState();
@@ -73,6 +82,7 @@ class _CareReportScreenState extends State<CareReportScreen> {
     final ok = await _controller.generateReport(
       startDate: _startDate!,
       endDate: _endDate!,
+      linkedCaregiverId: widget.linkedCaregiverId,
     );
     if (mounted) {
       setState(() => _reportGenerated = ok);
@@ -166,13 +176,18 @@ class _CareReportScreenState extends State<CareReportScreen> {
   // ─── Header ───────────────────────────────────────────────────────────────
 
   Widget _buildHeader() {
+    final bool isFamily = widget.isFamily;
+    final headerColors = isFamily
+        ? [AppColors.purpleLight, AppColors.purple]
+        : [AppColors.primaryLight, AppColors.primary];
+
     return SliverToBoxAdapter(
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.primaryLight, AppColors.primary],
+            colors: headerColors,
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -199,10 +214,31 @@ class _CareReportScreenState extends State<CareReportScreen> {
                         .copyWith(color: Colors.white, fontWeight: FontWeight.w800),
                   ),
                   Text(
-                    'Select a date range to generate',
+                    isFamily
+                        ? "Viewing your caregiver's care data"
+                        : 'Select a date range to generate',
                     style: AppTextStyles.secondarySm
                         .copyWith(color: Colors.white70),
                   ),
+                  if (isFamily) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.20),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'Family View · Read-only',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

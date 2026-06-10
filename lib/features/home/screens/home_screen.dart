@@ -9,6 +9,7 @@ import '../../../core/routes/app_routes.dart';
 import '../../appointments/controllers/appointment_controller.dart';
 import '../../appointments/models/appointment_model.dart';
 import '../../appointments/widgets/appointment_card.dart';
+import '../../care_reports/screens/care_report_screen.dart';
 import '../../notifications/widgets/appointment_notification_bell.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -180,6 +181,12 @@ class HomeScreen extends StatelessWidget {
                                   pendingCount: pendingCount,
                                 ),
                               const SizedBox(height: 24),
+                              if (isFamily)
+                                _FamilyCareReportCard(
+                                  linkedCaregiverId:
+                                      userData['linkedCaregiverId'] as String?,
+                                ),
+                              if (isFamily) const SizedBox(height: 24),
                               _ComingSoonSection(isFamily: isFamily),
                             ],
                           ),
@@ -189,7 +196,11 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              bottomNavigationBar: _BottomNavigation(isFamily: isFamily),
+              bottomNavigationBar: _BottomNavigation(
+                isFamily: isFamily,
+                linkedCaregiverId:
+                    userData['linkedCaregiverId'] as String?,
+              ),
             );
           },
         );
@@ -503,23 +514,22 @@ class _CaregiverQuickActions extends StatelessWidget {
       children: [
         Text('Quick Actions', style: AppTextStyles.h3),
         const SizedBox(height: 12),
+        _QuickActionCard(
+          title: 'Give Medication',
+          subtitle: '$pendingCount pending',
+          icon: Icons.add,
+          isPrimary: true,
+          onTap: () {
+            Navigator.pushNamed(context, AppRoutes.medications);
+          },
+        ),
+        const SizedBox(height: 12),
+        // Care documentation — grouped together
         Row(
           children: [
             Expanded(
               child: _QuickActionCard(
-                title: 'Give Medication',
-                subtitle: '$pendingCount pending',
-                icon: Icons.add,
-                isPrimary: true,
-                onTap: () {
-                  Navigator.pushNamed(context, AppRoutes.medications);
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _QuickActionCard(
-                title: 'Add Care Note',
+                title: 'Care Notes',
                 subtitle: 'Log daily record',
                 icon: Icons.note_add_outlined,
                 isPrimary: false,
@@ -528,17 +538,19 @@ class _CaregiverQuickActions extends StatelessWidget {
                 },
               ),
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _QuickActionCard(
+                title: 'Care Report',
+                subtitle: 'View summary',
+                icon: Icons.summarize_outlined,
+                isPrimary: false,
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.careReport);
+                },
+              ),
+            ),
           ],
-        ),
-        const SizedBox(height: 12),
-        _QuickActionCard(
-          title: 'Care Report',
-          subtitle: 'Summary report',
-          icon: Icons.summarize_outlined,
-          isPrimary: false,
-          onTap: () {
-            Navigator.pushNamed(context, AppRoutes.careReport);
-          },
         ),
         const SizedBox(height: 12),
         _QuickActionCard(
@@ -1000,8 +1012,12 @@ class _SectionCard extends StatelessWidget {
 
 class _BottomNavigation extends StatelessWidget {
   final bool isFamily;
+  final String? linkedCaregiverId;
 
-  const _BottomNavigation({required this.isFamily});
+  const _BottomNavigation({
+    required this.isFamily,
+    this.linkedCaregiverId,
+  });
 
   Future<void> _openFamilyCareNotes(BuildContext context) async {
   final currentUser = FirebaseAuth.instance.currentUser;
@@ -1069,7 +1085,16 @@ class _BottomNavigation extends StatelessWidget {
           return;
         }
         if (index == 4) {
-          Navigator.pushNamed(context, AppRoutes.careReport);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('AI Assistant — coming soon!'),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              margin: const EdgeInsets.all(16),
+            ),
+          );
           return;
         }
       },
@@ -1100,6 +1125,81 @@ class _BottomNavigation extends StatelessWidget {
           label: 'AI',
         ),
       ],
+    );
+  }
+}
+
+// ─── Family Care Report Card ────────────────────────────────────────────────
+
+class _FamilyCareReportCard extends StatelessWidget {
+  final String? linkedCaregiverId;
+
+  const _FamilyCareReportCard({this.linkedCaregiverId});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CareReportScreen(
+              isFamily: true,
+              linkedCaregiverId: linkedCaregiverId,
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.purpleBg,
+              AppColors.purple.withOpacity(0.10),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.purple.withOpacity(0.25)),
+        ),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.purple,
+              child: Icon(Icons.summarize_outlined,
+                  color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Care Summary Report',
+                    style: AppTextStyles.h4.copyWith(
+                      color: AppColors.purple,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'View your caregiver\'s care data & generate PDF',
+                    style: AppTextStyles.secondarySm,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.arrow_forward_ios_rounded,
+                size: 16, color: AppColors.purple),
+          ],
+        ),
+      ),
     );
   }
 }

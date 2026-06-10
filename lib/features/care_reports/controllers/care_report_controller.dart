@@ -19,20 +19,33 @@ class CareReportController extends ChangeNotifier {
 
   String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  /// Generates a care summary report for the current caregiver for the
-  /// supplied [startDate]–[endDate] range (both inclusive).
+  /// Generates a care summary report for the current caregiver (or the
+  /// caregiver linked to a family member) for the supplied
+  /// [startDate]–[endDate] range (both inclusive).
+  ///
+  /// Pass [linkedCaregiverId] when called from a family-member session so that
+  /// the query targets the correct caregiver's data instead of the family
+  /// member's own uid (which would return no results).
   ///
   /// Appointments are filtered by [appointmentDateTime].
   /// Medications are filtered by [createdAt] (when the record was created).
   Future<bool> generateReport({
     required DateTime startDate,
     required DateTime endDate,
+    String? linkedCaregiverId,
   }) async {
     if (_uid.isEmpty) {
       errorMessage = 'You must be logged in to generate a report.';
       notifyListeners();
       return false;
     }
+
+    // Family members query their linked caregiver's data; caregivers use their
+    // own uid.
+    final targetId =
+        (linkedCaregiverId != null && linkedCaregiverId.isNotEmpty)
+            ? linkedCaregiverId
+            : _uid;
 
     // Normalise: start of startDate, end of endDate
     final from = DateTime(startDate.year, startDate.month, startDate.day);
@@ -50,8 +63,8 @@ class CareReportController extends ChangeNotifier {
 
     try {
       final results = await Future.wait([
-        _fetchAppointments(from, to),
-        _fetchMedications(from, to),
+        _fetchAppointments(from, to, targetId),
+        _fetchMedications(from, to, targetId),
       ]);
 
       final appointments = results[0] as List<AppointmentModel>;
@@ -60,7 +73,7 @@ class CareReportController extends ChangeNotifier {
       report = CareReportModel(
         startDate: from,
         endDate: to,
-        generatedBy: _uid,
+        generatedBy: targetId,
         appointments: appointments,
         medications: medications,
       );
@@ -82,12 +95,13 @@ class CareReportController extends ChangeNotifier {
   Future<List<AppointmentModel>> _fetchAppointments(
     DateTime from,
     DateTime to,
+    String caregiverId,
   ) async {
     // Fetch all caregiver appointments then filter locally to avoid
     // composite-index requirements (consistent with existing repository pattern).
     final snapshot = await _firestore
         .collection('appointments')
-        .where('caregiverId', isEqualTo: _uid)
+        .where('caregiverId', isEqualTo: caregiverId)
         .get();
 
     return snapshot.docs
@@ -103,12 +117,13 @@ class CareReportController extends ChangeNotifier {
   Future<List<MedicationModel>> _fetchMedications(
     DateTime from,
     DateTime to,
+    String caregiverId,
   ) async {
     // Fetch medications by caregiverId (same pattern as existing repo), then
     // filter by createdAt locally.
     final snapshot = await _firestore
         .collection('medications')
-        .where('caregiverId', isEqualTo: _uid)
+        .where('caregiverId', isEqualTo: caregiverId)
         .get();
 
     return snapshot.docs

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart'; // ← SMAP-31
 import '../models/appointment_model.dart';
 import '../controllers/appointment_controller.dart';
-import '../../../data/services/google_calendar_service.dart'; // ← ADD
+import '../../../data/services/google_calendar_service.dart';
 import 'appointment_action_menu.dart';
 import 'delete_appointment_dialog.dart';
-
 
 class AppointmentCard extends StatelessWidget {
   final AppointmentModel appointment;
@@ -56,11 +56,10 @@ class AppointmentCard extends StatelessWidget {
   bool get _isUpcoming =>
       !appointment.isPast && appointment.status != 'cancelled';
 
-  // ── SMAP-26: sync to Google Calendar ─────────────────────────────────────
-
   Future<void> _syncToGoogleCalendar(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
-    final controller = Provider.of<AppointmentController>(context, listen: false);
+    final controller =
+        Provider.of<AppointmentController>(context, listen: false);
 
     messenger.showSnackBar(
       const SnackBar(content: Text('Syncing to Google Calendar...')),
@@ -71,7 +70,8 @@ class AppointmentCard extends StatelessWidget {
         : '${appointment.specialty} with ${appointment.doctorName}';
 
     String? eventId;
-    if (appointment.googleEventId != null && appointment.googleEventId!.isNotEmpty) {
+    if (appointment.googleEventId != null &&
+        appointment.googleEventId!.isNotEmpty) {
       eventId = await GoogleCalendarService.updateEvent(
         googleEventId: appointment.googleEventId!,
         title: appointment.title,
@@ -91,9 +91,7 @@ class AppointmentCard extends StatelessWidget {
         googleEventId: eventId,
         googleEventSyncState: 'synced',
       );
-      
       await controller.updateAppointment(updatedAppt);
-
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         const SnackBar(
@@ -109,6 +107,36 @@ class AppointmentCard extends StatelessWidget {
           backgroundColor: Color(0xFFEF4444),
         ),
       );
+    }
+  }
+
+  // ← SMAP-31
+  Future<void> _openInMaps(BuildContext context) async {
+    final query = appointment.clinicAddress.trim().isNotEmpty
+        ? appointment.clinicAddress.trim()
+        : appointment.clinicName.trim();
+
+    if (query.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No location available for this appointment.'),
+        ),
+      );
+      return;
+    }
+
+    final encoded = Uri.encodeComponent(query);
+    final uri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$encoded');
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open Google Maps.')),
+        );
+      }
     }
   }
 
@@ -180,7 +208,7 @@ class AppointmentCard extends StatelessWidget {
                   AppointmentActionMenu(
                     onEdit: onEdit!,
                     onDelete: () => _showDeleteDialog(context),
-                    onSyncCalendar: () => _syncToGoogleCalendar(context), // ← ADD
+                    onSyncCalendar: () => _syncToGoogleCalendar(context),
                   ),
               ],
             ),
@@ -219,10 +247,62 @@ class AppointmentCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
 
-            _infoRow(
-              icon: Icons.location_on_outlined,
-              label: appointment.clinicName,
-              muted: muted,
+            // ← SMAP-31: tappable location row
+            GestureDetector(
+              onTap: () => _openInMaps(context),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 15,
+                    color: muted
+                        ? const Color(0xFFCBD5E1)
+                        : const Color(0xFF0891B2),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          appointment.clinicName,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: muted
+                                ? const Color(0xFFCBD5E1)
+                                : const Color(0xFF475569),
+                          ),
+                        ),
+                        if (!muted &&
+                            appointment.clinicAddress.trim().isNotEmpty)
+                          Text(
+                            appointment.clinicAddress,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          ),
+                        if (!muted)
+                          const Text(
+                            'Tap to open in Google Maps',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF0891B2),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (!muted)
+                    const Icon(
+                      Icons.open_in_new,
+                      size: 14,
+                      color: Color(0xFF0891B2),
+                    ),
+                ],
+              ),
             ),
 
             if (appointment.notes.trim().isNotEmpty) ...[
@@ -273,6 +353,7 @@ class AppointmentCard extends StatelessWidget {
                   ),
                 ),
             ],
+
             if (onAddNote != null) ...[
               const SizedBox(height: 12),
               SizedBox(

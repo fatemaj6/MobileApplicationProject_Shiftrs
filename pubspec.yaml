@@ -16,7 +16,7 @@ dependencies:
   firebase_auth: ^5.0.0
   cloud_firestore: ^5.0.0
   firebase_storage: ^12.0.0
-  firebase_messaging: ^15.0.0        # ← ADD
+  firebase_messaging: ^15.0.0
 
   # UI
   google_fonts: ^6.2.1
@@ -33,6 +33,9 @@ dependencies:
   google_sign_in: ^6.2.1
   googleapis: ^13.2.0
   http: ^1.2.1
+
+  # SMAP-31: Open appointment location in Google Maps
+  url_launcher: ^6.3.0
 
   # SMAP-34: PDF report generation & share/download
   pdf: ^3.11.1

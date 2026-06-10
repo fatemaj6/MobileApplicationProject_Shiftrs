@@ -21,6 +21,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _clinicController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController(); // ← SMAP-31
   final TextEditingController _doctorController = TextEditingController();
   final TextEditingController _specialtyController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
@@ -42,6 +43,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
   void dispose() {
     _titleController.dispose();
     _clinicController.dispose();
+    _addressController.dispose(); // ← SMAP-31
     _doctorController.dispose();
     _specialtyController.dispose();
     _notesController.dispose();
@@ -50,19 +52,13 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
-
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? now,
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(now.year + 5),
     );
-
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
+    if (picked != null) setState(() => _selectedDate = picked);
   }
 
   Future<void> _pickTime() async {
@@ -70,25 +66,13 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
       context: context,
       initialTime: _selectedTime ?? TimeOfDay.now(),
     );
-
-    if (picked != null) {
-      setState(() {
-        _selectedTime = picked;
-      });
-    }
+    if (picked != null) setState(() => _selectedTime = picked);
   }
 
   DateTime _combineDateAndTime() {
     final date = _selectedDate!;
     final time = _selectedTime!;
-
-    return DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time.hour,
-      time.minute,
-    );
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
   Future<void> _addAppointment() async {
@@ -98,7 +82,6 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
       _showSnackBar('Please select appointment date.', isError: true);
       return;
     }
-
     if (_selectedTime == null) {
       _showSnackBar('Please select appointment time.', isError: true);
       return;
@@ -111,6 +94,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
       caregiverId: widget.caregiverId,
       title: _titleController.text.trim(),
       clinicName: _clinicController.text.trim(),
+      clinicAddress: _addressController.text.trim(), // ← SMAP-31
       doctorName: _doctorController.text.trim(),
       specialty: _specialtyController.text.trim(),
       appointmentType: _appointmentType,
@@ -142,9 +126,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
         backgroundColor:
             isError ? const Color(0xFFEF4444) : const Color(0xFF16A34A),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
     );
@@ -205,6 +187,13 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 14),
+                // ← SMAP-31
+                _buildTextField(
+                  controller: _addressController,
+                  label: 'Clinic Address',
+                  hint: 'e.g., 286 Jalan Ampang, 50450 Kuala Lumpur',
                 ),
                 const SizedBox(height: 14),
                 _buildTextField(
@@ -344,19 +333,10 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
         DropdownButtonFormField<String>(
           value: _appointmentType,
           items: _appointmentTypes
-              .map(
-                (type) => DropdownMenuItem(
-                  value: type,
-                  child: Text(type),
-                ),
-              )
+              .map((type) => DropdownMenuItem(value: type, child: Text(type)))
               .toList(),
           onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _appointmentType = value;
-              });
-            }
+            if (value != null) setState(() => _appointmentType = value);
           },
           decoration: InputDecoration(
             filled: true,

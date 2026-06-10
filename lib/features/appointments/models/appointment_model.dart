@@ -7,6 +7,7 @@ class AppointmentModel {
   final String? patientId;
   final String title;
   final String clinicName;
+  final String clinicAddress; // ← SMAP-31
   final String doctorName;
   final String specialty;
   final String appointmentType;
@@ -25,6 +26,7 @@ class AppointmentModel {
     this.patientId,
     required this.title,
     required this.clinicName,
+    this.clinicAddress = '', // ← SMAP-31
     this.doctorName = '',
     this.specialty = '',
     required this.appointmentType,
@@ -38,25 +40,19 @@ class AppointmentModel {
     this.googleEventSyncState,
   });
 
-  /// True if the appointment date/time is before now
   bool get isPast => appointmentDateTime.isBefore(DateTime.now());
 
-  /// e.g. "Sat, 30 May"
   String get formattedDate =>
       DateFormat('EEE, d MMM').format(appointmentDateTime);
 
-  /// e.g. "Fri, 10 Apr 2026"
   String get formattedDateLong =>
       DateFormat('EEE, d MMM yyyy').format(appointmentDateTime);
 
-  /// e.g. "10:00 AM"
   String get formattedTime =>
       DateFormat('h:mm a').format(appointmentDateTime);
 
-  /// Day number, e.g. "10"
   String get dayNumber => DateFormat('d').format(appointmentDateTime);
 
-  /// Short month, e.g. "Apr"
   String get shortMonth => DateFormat('MMM').format(appointmentDateTime);
 
   factory AppointmentModel.fromFirestore(DocumentSnapshot doc) {
@@ -66,7 +62,6 @@ class AppointmentModel {
 
   factory AppointmentModel.fromMap(Map<String, dynamic> data,
       {String id = ''}) {
-    // appointmentDateTime is stored as a Firestore Timestamp
     DateTime dt = DateTime.now();
     if (data['appointmentDateTime'] != null) {
       if (data['appointmentDateTime'] is Timestamp) {
@@ -80,6 +75,7 @@ class AppointmentModel {
       patientId: data['patientId'],
       title: data['title'] ?? '',
       clinicName: data['clinicName'] ?? '',
+      clinicAddress: data['clinicAddress'] ?? '', // ← SMAP-31
       doctorName: data['doctorName'] ?? '',
       specialty: data['specialty'] ?? '',
       appointmentType: data['appointmentType'] ?? 'Check-up',
@@ -100,6 +96,7 @@ class AppointmentModel {
       'patientId': patientId,
       'title': title,
       'clinicName': clinicName,
+      'clinicAddress': clinicAddress, // ← SMAP-31
       'doctorName': doctorName,
       'specialty': specialty,
       'appointmentType': appointmentType,
@@ -120,6 +117,7 @@ class AppointmentModel {
     String? patientId,
     String? title,
     String? clinicName,
+    String? clinicAddress, // ← SMAP-31
     String? doctorName,
     String? specialty,
     String? appointmentType,
@@ -138,6 +136,7 @@ class AppointmentModel {
       patientId: patientId ?? this.patientId,
       title: title ?? this.title,
       clinicName: clinicName ?? this.clinicName,
+      clinicAddress: clinicAddress ?? this.clinicAddress, // ← SMAP-31
       doctorName: doctorName ?? this.doctorName,
       specialty: specialty ?? this.specialty,
       appointmentType: appointmentType ?? this.appointmentType,

@@ -520,11 +520,12 @@ class _CaregiverQuickActions extends StatelessWidget {
             Expanded(
               child: _QuickActionCard(
                 title: 'Add Care Note',
-                subtitle: 'Next sprint',
+                subtitle: 'Log daily record',
                 icon: Icons.note_add_outlined,
                 isPrimary: false,
-                isDisabled: true,
-                onTap: () {},
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.careNotes);
+                },
               ),
             ),
           ],
@@ -553,7 +554,6 @@ class _QuickActionCard extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final bool isPrimary;
-  final bool isDisabled;
   final VoidCallback onTap;
 
   const _QuickActionCard({
@@ -562,7 +562,6 @@ class _QuickActionCard extends StatelessWidget {
     required this.icon,
     required this.isPrimary,
     required this.onTap,
-    this.isDisabled = false,
   });
 
   @override
@@ -575,51 +574,47 @@ class _QuickActionCard extends StatelessWidget {
         : AppColors.purpleBg;
     final iconColor = isPrimary ? AppColors.primaryFg : AppColors.purple;
 
-    return Opacity(
-      opacity: isDisabled ? 0.55 : 1,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        onTap: isDisabled ? null : onTap,
-        child: Container(
-          height: 112,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(
-              color: isPrimary ? Colors.transparent : AppColors.border,
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: Container(
+        height: 112,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(
+            color: isPrimary ? Colors.transparent : AppColors.border,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.035),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.035),
-                blurRadius: 12,
-                offset: const Offset(0, 5),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: iconBg,
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const Spacer(),
+            Text(
+              title,
+              style: AppTextStyles.bodyMd.copyWith(
+                fontWeight: FontWeight.w800,
+                color: textColor,
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: iconBg,
-                child: Icon(icon, color: iconColor, size: 20),
-              ),
-              const Spacer(),
-              Text(
-                title,
-                style: AppTextStyles.bodyMd.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                style: AppTextStyles.bodySm.copyWith(color: subColor),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              subtitle,
+              style: AppTextStyles.bodySm.copyWith(color: subColor),
+            ),
+          ],
         ),
       ),
     );
@@ -755,9 +750,21 @@ class _FamilyMedicationStatus extends StatelessWidget {
       },
       child: Column(
         children: [
-          _StatusLine(label: 'Given', count: givenCount, color: AppColors.given),
-          _StatusLine(label: 'Pending', count: pendingCount, color: AppColors.pending),
-          _StatusLine(label: 'Missed', count: missedCount, color: AppColors.destructive),
+          _StatusLine(
+            label: 'Given',
+            count: givenCount,
+            color: AppColors.given,
+          ),
+          _StatusLine(
+            label: 'Pending',
+            count: pendingCount,
+            color: AppColors.pending,
+          ),
+          _StatusLine(
+            label: 'Missed',
+            count: missedCount,
+            color: AppColors.destructive,
+          ),
         ],
       ),
     );
@@ -878,14 +885,18 @@ class _ComingSoonSection extends StatelessWidget {
             }
 
             final now = DateTime.now();
-            final upcomingAppointments = (snapshot.data ?? [])
-                .where(
-                  (a) => !a.appointmentDateTime.isBefore(now) &&
-                      a.status != 'cancelled',
-                )
-                .toList()
-              ..sort((a, b) =>
-                  a.appointmentDateTime.compareTo(b.appointmentDateTime));
+            final upcomingAppointments =
+                (snapshot.data ?? [])
+                    .where(
+                      (a) =>
+                          !a.appointmentDateTime.isBefore(now) &&
+                          a.status != 'cancelled',
+                    )
+                    .toList()
+                  ..sort(
+                    (a, b) =>
+                        a.appointmentDateTime.compareTo(b.appointmentDateTime),
+                  );
 
             final previewAppointments = upcomingAppointments.take(2).toList();
 
@@ -907,11 +918,13 @@ class _ComingSoonSection extends StatelessWidget {
 
             return Column(
               children: previewAppointments
-                  .map((a) => AppointmentCard(
-                        appointment: a,
-                        onEdit: null,
-                        onDelete: null,
-                      ))
+                  .map(
+                    (a) => AppointmentCard(
+                      appointment: a,
+                      onEdit: null,
+                      onDelete: null,
+                    ),
+                  )
                   .toList(),
             );
           },
@@ -1003,6 +1016,10 @@ class _BottomNavigation extends StatelessWidget {
             context,
             isFamily ? AppRoutes.familyAppointments : AppRoutes.appointments,
           );
+          return;
+        }
+        if (index == 3) {
+          Navigator.pushNamed(context, AppRoutes.careNotes);
           return;
         }
         ScaffoldMessenger.of(context).showSnackBar(

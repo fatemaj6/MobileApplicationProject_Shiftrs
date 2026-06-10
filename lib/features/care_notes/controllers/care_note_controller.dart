@@ -12,8 +12,9 @@ class CareNoteController extends ChangeNotifier {
 
   String get caregiverId => FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  Stream<List<CareNoteModel>> streamCareNotes() {
-    return _repository.streamCareNotesForCaregiver(caregiverId);
+  Stream<List<CareNoteModel>> streamCareNotes({String? caregiverIdOverride}) {
+    final id = caregiverIdOverride ?? caregiverId;
+    return _repository.streamCareNotesForCaregiver(id);
   }
 
   Future<bool> addCareNote(CareNoteModel note) async {

@@ -575,6 +575,7 @@ class _QuickActionCard extends StatelessWidget {
     final iconColor = isPrimary ? AppColors.primaryFg : AppColors.purple;
 
     return InkWell(
+      onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.lg),
       child: Container(
         height: 112,
@@ -992,6 +993,37 @@ class _BottomNavigation extends StatelessWidget {
 
   const _BottomNavigation({required this.isFamily});
 
+  Future<void> _openFamilyCareNotes(BuildContext context) async {
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser == null) return;
+
+  final userDoc = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(currentUser.uid)
+      .get();
+
+  final linkedCaregiverId = userDoc.data()?['linkedCaregiverId'];
+
+  if (linkedCaregiverId == null || linkedCaregiverId.toString().isEmpty) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No linked caregiver found.'),
+        ),
+      );
+    }
+    return;
+  }
+
+  if (context.mounted) {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.familyCareNotes,
+      arguments: linkedCaregiverId,
+    );
+  }
+}
+
   @override
   Widget build(BuildContext context) {
     final activeColor = isFamily ? AppColors.purple : AppColors.primary;
@@ -1018,10 +1050,14 @@ class _BottomNavigation extends StatelessWidget {
           );
           return;
         }
-        if (index == 3) {
-          Navigator.pushNamed(context, AppRoutes.careNotes);
-          return;
-        }
+       if (index == 3) {
+      if (isFamily) {
+        _openFamilyCareNotes(context);
+      } else {
+        Navigator.pushNamed(context, AppRoutes.careNotes);
+      }
+      return;
+    }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('This feature is coming in the next sprint.'),

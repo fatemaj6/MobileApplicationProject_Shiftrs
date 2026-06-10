@@ -22,6 +22,7 @@ class AppRoutes {
   static const String familyMedications = '/family/medications';
   static const String familyAppointments = '/family/appointments';
   static const String familyNotifications = '/family/notifications';
+  static const String familyCareNotes = '/family/care-notes';
 
   // Shared
   static const String notifications = '/notifications';
@@ -30,7 +31,6 @@ class AppRoutes {
   static const String profile = '/profile';
 
   // Appointment routes
-
   static const String addAppointment = '/appointments/add';
   static const String editAppointment = '/appointments/edit';
 }

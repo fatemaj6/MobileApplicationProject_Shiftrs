@@ -27,6 +27,7 @@ class AppRoutes {
   // Shared
   static const String notifications = '/notifications';
   static const String reports = '/reports';
+  static const String careReport = '/reports/care-summary'; // SMAP-34
   static const String aiAssistant = '/ai-assistant';
   static const String profile = '/profile';
 

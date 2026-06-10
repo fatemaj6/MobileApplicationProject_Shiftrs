@@ -532,6 +532,16 @@ class _CaregiverQuickActions extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _QuickActionCard(
+          title: 'Care Report',
+          subtitle: 'Summary report',
+          icon: Icons.summarize_outlined,
+          isPrimary: false,
+          onTap: () {
+            Navigator.pushNamed(context, AppRoutes.careReport);
+          },
+        ),
+        const SizedBox(height: 12),
+        _QuickActionCard(
           title: 'Add Appointment',
           subtitle: 'Schedule visit',
           icon: Icons.calendar_month_outlined,
@@ -1050,19 +1060,18 @@ class _BottomNavigation extends StatelessWidget {
           );
           return;
         }
-       if (index == 3) {
-      if (isFamily) {
-        _openFamilyCareNotes(context);
-      } else {
-        Navigator.pushNamed(context, AppRoutes.careNotes);
-      }
-      return;
-    }
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('This feature is coming in the next sprint.'),
-          ),
-        );
+        if (index == 3) {
+          if (isFamily) {
+            _openFamilyCareNotes(context);
+          } else {
+            Navigator.pushNamed(context, AppRoutes.careNotes);
+          }
+          return;
+        }
+        if (index == 4) {
+          Navigator.pushNamed(context, AppRoutes.careReport);
+          return;
+        }
       },
       items: const [
         BottomNavigationBarItem(
@@ -1081,9 +1090,9 @@ class _BottomNavigation extends StatelessWidget {
           label: 'Appts',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.note_alt_outlined),
-          activeIcon: Icon(Icons.note_alt),
-          label: 'Notes',
+          icon: Icon(Icons.summarize_outlined),
+          activeIcon: Icon(Icons.summarize),
+          label: 'Reports',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.auto_awesome_outlined),

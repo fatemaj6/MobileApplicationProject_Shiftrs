@@ -22,6 +22,7 @@ import 'features/appointments/screens/edit_appointment_screen.dart';
 import 'features/appointments/models/appointment_model.dart';
 import 'features/appointments/screens/family_appointment_list_screen.dart';
 import 'features/notifications/screens/appointment_notifications_screen.dart';
+import 'features/care_reports/screens/care_report_screen.dart'; // SMAP-34
 
 // Care Note screens
 import 'features/care_notes/screens/care_note_list_screen.dart';
@@ -71,4 +72,7 @@ final Map<String, WidgetBuilder> appRoutes = {
       caregiverIdOverride: caregiverId,
     );
   },
+
+  // SMAP-34: Care Summary Report
+  AppRoutes.careReport: (ctx) => const CareReportScreen(),
 };

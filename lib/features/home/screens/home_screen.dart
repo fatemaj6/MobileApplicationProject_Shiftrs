@@ -1022,6 +1022,14 @@ class _BottomNavigation extends StatelessWidget {
           Navigator.pushNamed(context, AppRoutes.careNotes);
           return;
         }
+        if (index == 4) {
+          Navigator.pushNamed(
+            context,
+            AppRoutes.aiAssistant,
+            arguments: isFamily,
+          );
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('This feature is coming in the next sprint.'),

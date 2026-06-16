@@ -20,6 +20,8 @@ import 'features/notifications/screens/appointment_notifications_screen.dart';
 // Care Note screens
 import 'features/care_notes/screens/care_note_list_screen.dart';
 import 'features/care_notes/screens/add_care_note_screen.dart';
+// AI features
+import 'features/ai_assistant/screens/ai_assistant_screen.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
   AppRoutes.welcome: (ctx) => const WelcomeScreen(),
@@ -50,4 +52,12 @@ final Map<String, WidgetBuilder> appRoutes = {
   // Care Note routes
   AppRoutes.careNotes: (ctx) => const CareNoteListScreen(),
   AppRoutes.addCareNote: (ctx) => const AddCareNoteScreen(),
+  // AI routes
+  AppRoutes.aiAssistant: (ctx) {
+    final args = ModalRoute.of(ctx)?.settings.arguments;
+
+    final isFamily = args is bool ? args : false;
+
+    return AiAssistantScreen(isFamily: isFamily);
+  },
 };

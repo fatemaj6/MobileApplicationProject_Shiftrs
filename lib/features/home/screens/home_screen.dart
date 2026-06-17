@@ -1085,15 +1085,10 @@ class _BottomNavigation extends StatelessWidget {
           return;
         }
         if (index == 4) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('AI Assistant — coming soon!'),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
-              margin: const EdgeInsets.all(16),
-            ),
+          Navigator.pushNamed(
+            context,
+            AppRoutes.aiAssistant,
+            arguments: isFamily,
           );
           return;
         }

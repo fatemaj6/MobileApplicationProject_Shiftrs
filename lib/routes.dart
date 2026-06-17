@@ -27,6 +27,8 @@ import 'features/care_reports/screens/care_report_screen.dart'; // SMAP-34
 // Care Note screens
 import 'features/care_notes/screens/care_note_list_screen.dart';
 import 'features/care_notes/screens/add_care_note_screen.dart';
+// AI features
+import 'features/ai_assistant/screens/ai_assistant_screen.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
   // Auth routes
@@ -75,4 +77,11 @@ final Map<String, WidgetBuilder> appRoutes = {
 
   // SMAP-34: Care Summary Report
   AppRoutes.careReport: (ctx) => const CareReportScreen(),
+
+  // AI routes
+  AppRoutes.aiAssistant: (ctx) {
+    final args = ModalRoute.of(ctx)?.settings.arguments;
+    final isFamily = args is bool ? args : false;
+    return AiAssistantScreen(isFamily: isFamily);
+  },
 };

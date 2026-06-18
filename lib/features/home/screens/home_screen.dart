@@ -11,6 +11,8 @@ import '../../appointments/models/appointment_model.dart';
 import '../../appointments/widgets/appointment_card.dart';
 import '../../care_reports/screens/care_report_screen.dart';
 import '../../notifications/widgets/appointment_notification_bell.dart';
+import '../../../data/model/health_alert_model.dart';
+import '../../../data/repositories/health_alert_repository.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -169,6 +171,10 @@ class HomeScreen extends StatelessWidget {
                                   pendingCount: pendingCount,
                                   missedCount: missedCount,
                                 ),
+                                if (!isFamily) ...[
+                                  const SizedBox(height: 16),
+                                  _HealthStatusCard(caregiverId: FirebaseAuth.instance.currentUser!.uid),
+                                ],
                               const SizedBox(height: 24),
                               if (isFamily)
                                 _FamilyMedicationStatus(
@@ -514,57 +520,60 @@ class _CaregiverQuickActions extends StatelessWidget {
       children: [
         Text('Quick Actions', style: AppTextStyles.h3),
         const SizedBox(height: 12),
-        _QuickActionCard(
-          title: 'Give Medication',
-          subtitle: '$pendingCount pending',
-          icon: Icons.add,
-          isPrimary: true,
-          onTap: () {
-            Navigator.pushNamed(context, AppRoutes.medications);
-          },
-        ),
-        const SizedBox(height: 12),
-        // Care documentation — grouped together
         Row(
           children: [
             Expanded(
               child: _QuickActionCard(
-                title: 'Care Notes',
-                subtitle: 'Log daily record',
-                icon: Icons.note_add_outlined,
-                isPrimary: false,
+                title: 'Give Medication',
+                subtitle: '$pendingCount pending',
+                icon: Icons.add,
                 onTap: () {
-                  Navigator.pushNamed(context, AppRoutes.careNotes);
+                  Navigator.pushNamed(context, AppRoutes.medications);
                 },
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _QuickActionCard(
-                title: 'Care Report',
-                subtitle: 'View summary',
-                icon: Icons.summarize_outlined,
-                isPrimary: false,
+                title: 'Care Notes',
+                subtitle: 'Log daily record',
+                icon: Icons.note_add_outlined,
                 onTap: () {
-                  Navigator.pushNamed(context, AppRoutes.careReport);
+                  Navigator.pushNamed(context, AppRoutes.careNotes);
                 },
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        _QuickActionCard(
-          title: 'Add Appointment',
-          subtitle: 'Schedule visit',
-          icon: Icons.calendar_month_outlined,
-          isPrimary: false,
-          onTap: () {
-            Navigator.pushNamed(
-              context,
-              AppRoutes.addAppointment,
-              arguments: caregiverId,
-            );
-          },
+        Row(
+          children: [
+            Expanded(
+              child: _QuickActionCard(
+                title: 'Care Report',
+                subtitle: 'View summary',
+                icon: Icons.summarize_outlined,
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.careReport);
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _QuickActionCard(
+                title: 'Add Appointment',
+                subtitle: 'Schedule visit',
+                icon: Icons.calendar_month_outlined,
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.addAppointment,
+                    arguments: caregiverId,
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -575,39 +584,27 @@ class _QuickActionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
-  final bool isPrimary;
   final VoidCallback onTap;
 
   const _QuickActionCard({
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.isPrimary,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isPrimary ? AppColors.primary : AppColors.card;
-    final textColor = isPrimary ? AppColors.primaryFg : AppColors.foreground;
-    final subColor = isPrimary ? Colors.white70 : AppColors.textSecondary;
-    final iconBg = isPrimary
-        ? Colors.white.withOpacity(0.22)
-        : AppColors.purpleBg;
-    final iconColor = isPrimary ? AppColors.primaryFg : AppColors.purple;
-
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.lg),
       child: Container(
-        height: 112,
+        height: 120,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: bgColor,
+          color: AppColors.primary,
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(
-            color: isPrimary ? Colors.transparent : AppColors.border,
-          ),
+          border: Border.all(color: Colors.transparent),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.035),
@@ -621,21 +618,21 @@ class _QuickActionCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: iconBg,
-              child: Icon(icon, color: iconColor, size: 20),
+              backgroundColor: Colors.white.withOpacity(0.22),
+              child: Icon(icon, color: AppColors.primaryFg, size: 20),
             ),
             const Spacer(),
             Text(
               title,
               style: AppTextStyles.bodyMd.copyWith(
                 fontWeight: FontWeight.w800,
-                color: textColor,
+                color: AppColors.primaryFg,
               ),
             ),
             const SizedBox(height: 3),
             Text(
               subtitle,
-              style: AppTextStyles.bodySm.copyWith(color: subColor),
+              style: AppTextStyles.bodySm.copyWith(color: Colors.white70),
             ),
           ],
         ),
@@ -1195,6 +1192,109 @@ class _FamilyCareReportCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+class _HealthStatusCard extends StatelessWidget {
+  final String caregiverId;
+
+  const _HealthStatusCard({required this.caregiverId});
+
+  @override
+  Widget build(BuildContext context) {
+    final repository = HealthAlertRepository();
+
+    return StreamBuilder<List<HealthAlertModel>>(
+      stream: repository.streamAlertsForCaregiver(caregiverId),
+      builder: (context, snapshot) {
+        final alerts = snapshot.data ?? [];
+        final activeAlerts = alerts.where((alert) => alert.isRead == false).toList();
+        final hasAlerts = activeAlerts.isNotEmpty;
+
+        return InkWell(
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.healthAlerts,
+              arguments: caregiverId,
+            );
+          },
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(
+                color: hasAlerts ? AppColors.alertAmberBorder : AppColors.border,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.035),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: hasAlerts
+                      ? AppColors.alertAmberBg
+                      : AppColors.cyanBg,
+                  child: Icon(
+                    hasAlerts
+                        ? Icons.warning_amber_rounded
+                        : Icons.verified_outlined,
+                    color: hasAlerts
+                        ? AppColors.alertAmber
+                        : AppColors.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Health Status', style: AppTextStyles.h4),
+                      const SizedBox(height: 4),
+                      Text(
+                        hasAlerts
+                            ? '${activeAlerts.length} active alert(s)'
+                            : 'Everything looks normal',
+                        style: AppTextStyles.bodyMd.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: hasAlerts
+                              ? AppColors.alertAmber
+                              : AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        hasAlerts
+                            ? activeAlerts.take(2).map((a) => a.title).join(' • ')
+                            : 'No abnormal patterns detected.',
+                        style: AppTextStyles.secondarySm,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: AppColors.textMuted,
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

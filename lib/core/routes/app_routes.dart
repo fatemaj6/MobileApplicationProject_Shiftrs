@@ -34,4 +34,7 @@ class AppRoutes {
   // Appointment routes
   static const String addAppointment = '/appointments/add';
   static const String editAppointment = '/appointments/edit';
+
+  //Caregiver health alerts
+  static const String healthAlerts = '/caregiver/health-alerts';
 }

@@ -30,6 +30,9 @@ import 'features/care_notes/screens/add_care_note_screen.dart';
 // AI features
 import 'features/ai_assistant/screens/ai_assistant_screen.dart';
 
+//Caregiver health alerts
+import 'features/health_alerts/screens/health_alerts_screen.dart';
+
 final Map<String, WidgetBuilder> appRoutes = {
   // Auth routes
   AppRoutes.welcome: (ctx) => const WelcomeScreen(),
@@ -84,4 +87,10 @@ final Map<String, WidgetBuilder> appRoutes = {
     final isFamily = args is bool ? args : false;
     return AiAssistantScreen(isFamily: isFamily);
   },
+
+  //Caregiver health alerts route
+  AppRoutes.healthAlerts: (context) {
+  final caregiverId = ModalRoute.of(context)!.settings.arguments as String;
+  return HealthAlertsScreen(caregiverId: caregiverId);
+},
 };

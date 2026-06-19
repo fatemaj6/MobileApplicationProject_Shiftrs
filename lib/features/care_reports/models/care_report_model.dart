@@ -6,7 +6,8 @@ import '../../../data/model/medication_model.dart';
 class CareReportModel {
   final DateTime startDate;
   final DateTime endDate;
-  final String generatedBy; // caregiverId
+  final String generatedBy; 
+  final String selectedCategory;// caregiverId
 
   // Appointments
   final List<AppointmentModel> appointments;
@@ -27,12 +28,13 @@ class CareReportModel {
   late final double adherencePercentage;
 
   CareReportModel({
-    required this.startDate,
-    required this.endDate,
-    required this.generatedBy,
-    required this.appointments,
-    required this.medications,
-  }) {
+  required this.startDate,
+  required this.endDate,
+  required this.generatedBy,
+  required this.selectedCategory,
+  required this.appointments,
+  required this.medications,
+}) {
     // Appointment stats
     totalAppointments = appointments.length;
     upcomingAppointments =

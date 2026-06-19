@@ -8,20 +8,23 @@ import '../../../data/repositories/health_alert_repository.dart';
 
 class HealthAlertsScreen extends StatelessWidget {
   final String caregiverId;
+  final bool isFamilyView;
 
   const HealthAlertsScreen({
     super.key,
     required this.caregiverId,
+    this.isFamilyView = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final repository = HealthAlertRepository();
+    final activeColor = isFamilyView ? AppColors.purple : AppColors.primary;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Health Alerts'),
+        title: Text(isFamilyView ? 'Emergency Alerts' : 'Health Alerts'),
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.foreground,
         elevation: 0,
@@ -36,15 +39,21 @@ class HealthAlertsScreen extends StatelessWidget {
           final alerts = snapshot.data ?? [];
 
           if (alerts.isEmpty) {
-            return const _EmptyAlertsState();
+            return _EmptyAlertsState(
+              activeColor: activeColor,
+              activeBg: isFamilyView ? AppColors.purpleBg : AppColors.cyanBg,
+            );
           }
 
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             itemCount: alerts.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
-              return _HealthAlertCard(alert: alerts[index]);
+              return _HealthAlertCard(
+                alert: alerts[index],
+                isFamilyView: isFamilyView,
+              );
             },
           );
         },
@@ -54,7 +63,10 @@ class HealthAlertsScreen extends StatelessWidget {
 }
 
 class _EmptyAlertsState extends StatelessWidget {
-  const _EmptyAlertsState();
+  final Color activeColor;
+  final Color activeBg;
+
+  const _EmptyAlertsState({required this.activeColor, required this.activeBg});
 
   @override
   Widget build(BuildContext context) {
@@ -66,10 +78,10 @@ class _EmptyAlertsState extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 38,
-              backgroundColor: AppColors.cyanBg,
+              backgroundColor: activeBg,
               child: Icon(
                 Icons.verified_outlined,
-                color: AppColors.primary,
+                color: activeColor,
                 size: 42,
               ),
             ),
@@ -94,8 +106,9 @@ class _EmptyAlertsState extends StatelessWidget {
 
 class _HealthAlertCard extends StatelessWidget {
   final HealthAlertModel alert;
+  final bool isFamilyView;
 
-  const _HealthAlertCard({required this.alert});
+  const _HealthAlertCard({required this.alert, required this.isFamilyView});
 
   Color get _typeColor {
     switch (alert.type) {
@@ -184,16 +197,46 @@ class _HealthAlertCard extends StatelessWidget {
     }
   }
 
+  String get _suggestedAction {
+    switch (alert.type) {
+      case 'blood_pressure':
+        return alert.severity == 'high'
+            ? 'Contact the caregiver and seek urgent medical advice if symptoms are present.'
+            : 'Ask the caregiver to recheck blood pressure and keep monitoring.';
+      case 'mood_pattern':
+        return 'Check in with the patient and review recent care notes with the caregiver.';
+      case 'sleep_low':
+        return 'Encourage rest and ask the caregiver to monitor sleep again tonight.';
+      case 'symptom_keyword':
+        return 'Review the care note details and contact the caregiver for context.';
+      case 'missed_medication':
+        return 'Confirm the medication schedule with the caregiver.';
+      case 'appointment_load':
+        return 'Review upcoming appointments and help with transport or reminders.';
+      default:
+        return 'Review the patient status and contact the caregiver if needed.';
+    }
+  }
+
+  String _dateTimeLabel(DateTime date) {
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+    return '${date.day}/${date.month}/${date.year} $hour:$minute';
+  }
+
   @override
   Widget build(BuildContext context) {
     final createdDate = alert.createdAt?.toDate();
+    final borderColor = alert.severity == 'high'
+        ? AppColors.destructive.withOpacity(0.38)
+        : _typeColor.withOpacity(0.22);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: _typeColor.withOpacity(0.22)),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.035),
@@ -222,6 +265,9 @@ class _HealthAlertCard extends StatelessWidget {
                         alert.title,
                         style: AppTextStyles.bodyMd.copyWith(
                           fontWeight: FontWeight.w800,
+                          color: isFamilyView && alert.severity == 'high'
+                              ? AppColors.destructive
+                              : AppColors.foreground,
                         ),
                       ),
                     ),
@@ -249,11 +295,37 @@ class _HealthAlertCard extends StatelessWidget {
                     ),
                     if (createdDate != null)
                       _SmallChip(
-                        label:
-                            '${createdDate.day}/${createdDate.month}/${createdDate.year}',
+                        label: _dateTimeLabel(createdDate),
                         color: AppColors.textMuted,
                       ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isFamilyView
+                        ? AppColors.purpleBg.withOpacity(0.55)
+                        : AppColors.cyanBg.withOpacity(0.70),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Suggested action',
+                        style: AppTextStyles.bodySm.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: isFamilyView
+                              ? AppColors.purple
+                              : AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(_suggestedAction, style: AppTextStyles.secondarySm),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -299,10 +371,7 @@ class _SmallChip extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _SmallChip({
-    required this.label,
-    required this.color,
-  });
+  const _SmallChip({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {

@@ -32,6 +32,7 @@ import 'features/ai_assistant/screens/ai_assistant_screen.dart';
 
 //Caregiver health alerts
 import 'features/health_alerts/screens/health_alerts_screen.dart';
+import 'features/health_trends/screens/health_trends_screen.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
   // Auth routes
@@ -66,10 +67,21 @@ final Map<String, WidgetBuilder> appRoutes = {
   AppRoutes.familyAppointments: (ctx) => const FamilyAppointmentListScreen(),
   AppRoutes.familyNotifications: (ctx) =>
       const AppointmentNotificationsScreen(),
+  AppRoutes.familyHealthAlerts: (ctx) {
+    final caregiverId = ModalRoute.of(ctx)?.settings.arguments as String?;
+    return HealthAlertsScreen(
+      caregiverId: caregiverId ?? '',
+      isFamilyView: true,
+    );
+  },
 
   // Care Note routes
   AppRoutes.careNotes: (ctx) => const CareNoteListScreen(),
   AppRoutes.addCareNote: (ctx) => const AddCareNoteScreen(),
+  AppRoutes.healthTrends: (ctx) {
+    final caregiverId = ModalRoute.of(ctx)?.settings.arguments as String?;
+    return HealthTrendsScreen(caregiverId: caregiverId ?? '');
+  },
   AppRoutes.familyCareNotes: (ctx) {
     final caregiverId = ModalRoute.of(ctx)?.settings.arguments as String?;
     return CareNoteListScreen(
@@ -90,7 +102,7 @@ final Map<String, WidgetBuilder> appRoutes = {
 
   //Caregiver health alerts route
   AppRoutes.healthAlerts: (context) {
-  final caregiverId = ModalRoute.of(context)!.settings.arguments as String;
-  return HealthAlertsScreen(caregiverId: caregiverId);
-},
+    final caregiverId = ModalRoute.of(context)!.settings.arguments as String;
+    return HealthAlertsScreen(caregiverId: caregiverId);
+  },
 };

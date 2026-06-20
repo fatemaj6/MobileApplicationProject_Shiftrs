@@ -171,10 +171,17 @@ class HomeScreen extends StatelessWidget {
                                   pendingCount: pendingCount,
                                   missedCount: missedCount,
                                 ),
-                                if (!isFamily) ...[
-                                  const SizedBox(height: 16),
-                                  _HealthStatusCard(caregiverId: FirebaseAuth.instance.currentUser!.uid),
-                                ],
+                              const SizedBox(height: 16),
+                              if (isFamily)
+                                _FamilyHealthAlertCard(
+                                  caregiverId:
+                                      userData['linkedCaregiverId'] as String?,
+                                )
+                              else
+                                _HealthStatusCard(
+                                  caregiverId:
+                                      FirebaseAuth.instance.currentUser!.uid,
+                                ),
                               const SizedBox(height: 24),
                               if (isFamily)
                                 _FamilyMedicationStatus(
@@ -204,8 +211,7 @@ class HomeScreen extends StatelessWidget {
               ),
               bottomNavigationBar: _BottomNavigation(
                 isFamily: isFamily,
-                linkedCaregiverId:
-                    userData['linkedCaregiverId'] as String?,
+                linkedCaregiverId: userData['linkedCaregiverId'] as String?,
               ),
             );
           },
@@ -1011,41 +1017,36 @@ class _BottomNavigation extends StatelessWidget {
   final bool isFamily;
   final String? linkedCaregiverId;
 
-  const _BottomNavigation({
-    required this.isFamily,
-    this.linkedCaregiverId,
-  });
+  const _BottomNavigation({required this.isFamily, this.linkedCaregiverId});
 
   Future<void> _openFamilyCareNotes(BuildContext context) async {
-  final currentUser = FirebaseAuth.instance.currentUser;
-  if (currentUser == null) return;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
 
-  final userDoc = await FirebaseFirestore.instance
-      .collection('users')
-      .doc(currentUser.uid)
-      .get();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .get();
 
-  final linkedCaregiverId = userDoc.data()?['linkedCaregiverId'];
+    final linkedCaregiverId = userDoc.data()?['linkedCaregiverId'];
 
-  if (linkedCaregiverId == null || linkedCaregiverId.toString().isEmpty) {
+    if (linkedCaregiverId == null || linkedCaregiverId.toString().isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No linked caregiver found.')),
+        );
+      }
+      return;
+    }
+
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No linked caregiver found.'),
-        ),
+      Navigator.pushNamed(
+        context,
+        AppRoutes.familyCareNotes,
+        arguments: linkedCaregiverId,
       );
     }
-    return;
   }
-
-  if (context.mounted) {
-    Navigator.pushNamed(
-      context,
-      AppRoutes.familyCareNotes,
-      arguments: linkedCaregiverId,
-    );
-  }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -1148,10 +1149,7 @@ class _FamilyCareReportCard extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              AppColors.purpleBg,
-              AppColors.purple.withOpacity(0.10),
-            ],
+            colors: [AppColors.purpleBg, AppColors.purple.withOpacity(0.10)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -1163,8 +1161,11 @@ class _FamilyCareReportCard extends StatelessWidget {
             const CircleAvatar(
               radius: 22,
               backgroundColor: AppColors.purple,
-              child: Icon(Icons.summarize_outlined,
-                  color: Colors.white, size: 22),
+              child: Icon(
+                Icons.summarize_outlined,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -1187,14 +1188,238 @@ class _FamilyCareReportCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.arrow_forward_ios_rounded,
-                size: 16, color: AppColors.purple),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: AppColors.purple,
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+class _FamilyHealthAlertCard extends StatelessWidget {
+  final String? caregiverId;
+
+  const _FamilyHealthAlertCard({this.caregiverId});
+
+  @override
+  Widget build(BuildContext context) {
+    final linkedCaregiverId = caregiverId;
+
+    if (linkedCaregiverId == null || linkedCaregiverId.isEmpty) {
+      return _FamilyAlertShell(
+        icon: Icons.link_off_outlined,
+        iconColor: AppColors.textMuted,
+        iconBg: AppColors.pendingBg,
+        title: 'Emergency Alerts',
+        status: 'No linked caregiver',
+        message: 'Link a caregiver account to receive health alerts.',
+        borderColor: AppColors.border,
+        onTap: null,
+      );
+    }
+
+    final repository = HealthAlertRepository();
+
+    return StreamBuilder<List<HealthAlertModel>>(
+      stream: repository.streamAlertsForCaregiver(linkedCaregiverId),
+      builder: (context, snapshot) {
+        final alerts = snapshot.data ?? [];
+        final activeAlerts = alerts
+            .where((alert) => alert.isRead == false)
+            .toList();
+        final hasAlerts = activeAlerts.isNotEmpty;
+        final highAlerts = activeAlerts
+            .where((alert) => alert.severity == 'high')
+            .toList();
+        final leadAlert = highAlerts.isNotEmpty
+            ? highAlerts.first
+            : (activeAlerts.isNotEmpty ? activeAlerts.first : null);
+
+        return _FamilyAlertShell(
+          icon: hasAlerts
+              ? Icons.notification_important_outlined
+              : Icons.verified_outlined,
+          iconColor: hasAlerts
+              ? (leadAlert?.severity == 'high'
+                    ? AppColors.destructive
+                    : AppColors.alertAmber)
+              : AppColors.purple,
+          iconBg: hasAlerts
+              ? (leadAlert?.severity == 'high'
+                    ? AppColors.missedBg
+                    : AppColors.alertAmberBg)
+              : AppColors.purpleBg,
+          title: 'Emergency Alerts',
+          status: hasAlerts
+              ? (leadAlert?.severity == 'high'
+                    ? 'Emergency alert'
+                    : 'Abnormal pattern detected')
+              : 'No emergency alerts',
+          message: leadAlert?.message ?? 'No abnormal patterns detected.',
+          borderColor: hasAlerts
+              ? (leadAlert?.severity == 'high'
+                    ? AppColors.destructive.withOpacity(0.38)
+                    : AppColors.alertAmberBorder)
+              : AppColors.border,
+          severity: leadAlert?.severity,
+          date: leadAlert?.createdAt?.toDate(),
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.familyHealthAlerts,
+              arguments: linkedCaregiverId,
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _FamilyAlertShell extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String title;
+  final String status;
+  final String message;
+  final Color borderColor;
+  final String? severity;
+  final DateTime? date;
+  final VoidCallback? onTap;
+
+  const _FamilyAlertShell({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.title,
+    required this.status,
+    required this.message,
+    required this.borderColor,
+    this.severity,
+    this.date,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.035),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: iconBg,
+            child: Icon(icon, color: iconColor, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.h4),
+                const SizedBox(height: 4),
+                Text(
+                  status,
+                  style: AppTextStyles.bodyMd.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: iconColor,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  message,
+                  style: AppTextStyles.secondarySm,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (severity != null || date != null) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (severity != null)
+                        _MiniStatusChip(
+                          label: severity!.toUpperCase(),
+                          color: iconColor,
+                        ),
+                      if (date != null)
+                        _MiniStatusChip(
+                          label:
+                              '${date!.day}/${date!.month}/${date!.year} ${date!.hour.toString().padLeft(2, '0')}:${date!.minute.toString().padLeft(2, '0')}',
+                          color: AppColors.textMuted,
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Icon(
+            Icons.arrow_forward_ios_rounded,
+            color: AppColors.textMuted,
+            size: 16,
+          ),
+        ],
+      ),
+    );
+
+    if (onTap == null) return content;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: content,
+    );
+  }
+}
+
+class _MiniStatusChip extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _MiniStatusChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.bodySm.copyWith(
+          fontSize: 10,
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
 class _HealthStatusCard extends StatelessWidget {
   final String caregiverId;
 
@@ -1208,14 +1433,16 @@ class _HealthStatusCard extends StatelessWidget {
       stream: repository.streamAlertsForCaregiver(caregiverId),
       builder: (context, snapshot) {
         final alerts = snapshot.data ?? [];
-        final activeAlerts = alerts.where((alert) => alert.isRead == false).toList();
+        final activeAlerts = alerts
+            .where((alert) => alert.isRead == false)
+            .toList();
         final hasAlerts = activeAlerts.isNotEmpty;
 
         return InkWell(
           onTap: () {
             Navigator.pushNamed(
               context,
-              AppRoutes.healthAlerts,
+              AppRoutes.healthTrends,
               arguments: caregiverId,
             );
           },
@@ -1227,7 +1454,9 @@ class _HealthStatusCard extends StatelessWidget {
               color: AppColors.card,
               borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(
-                color: hasAlerts ? AppColors.alertAmberBorder : AppColors.border,
+                color: hasAlerts
+                    ? AppColors.alertAmberBorder
+                    : AppColors.border,
               ),
               boxShadow: [
                 BoxShadow(
@@ -1248,9 +1477,7 @@ class _HealthStatusCard extends StatelessWidget {
                     hasAlerts
                         ? Icons.warning_amber_rounded
                         : Icons.verified_outlined,
-                    color: hasAlerts
-                        ? AppColors.alertAmber
-                        : AppColors.primary,
+                    color: hasAlerts ? AppColors.alertAmber : AppColors.primary,
                     size: 24,
                   ),
                 ),
@@ -1263,7 +1490,7 @@ class _HealthStatusCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         hasAlerts
-                            ? '${activeAlerts.length} active alert(s)'
+                            ? 'Abnormal pattern detected'
                             : 'Everything looks normal',
                         style: AppTextStyles.bodyMd.copyWith(
                           fontWeight: FontWeight.w800,
@@ -1275,7 +1502,10 @@ class _HealthStatusCard extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         hasAlerts
-                            ? activeAlerts.take(2).map((a) => a.title).join(' • ')
+                            ? activeAlerts
+                                  .take(2)
+                                  .map((a) => a.title)
+                                  .join(' • ')
                             : 'No abnormal patterns detected.',
                         style: AppTextStyles.secondarySm,
                         maxLines: 2,

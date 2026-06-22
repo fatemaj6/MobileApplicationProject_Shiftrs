@@ -1,25 +1,145 @@
-// google_calendar_service.dart
-import 'package:flutter/foundation.dart'; // for debugPrint — FIX
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/calendar/v3.dart' as gcal;
 import 'package:http/http.dart' as http;
 
+import 'google_signin_web.dart';
+
 class GoogleCalendarService {
+  static const _calendarScope =
+      'https://www.googleapis.com/auth/calendar';
+
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['https://www.googleapis.com/auth/calendar'],
+    scopes: [_calendarScope],
   );
 
+  // ─── Get valid auth headers (ID token on web ≠ access token) ──────────
+
+  static Future<Map<String, String>?> _getAuthHeaders(
+      GoogleSignInAccount account) async {
+    if (kIsWeb) {
+      // On web, GIS separates authentication (renderButton → ID token)
+      // from authorization (requestScopes → OAuth2 access token).
+      // The Calendar API needs the OAuth2 access token, so we must
+      // call requestScopes() to get one before calling authHeaders.
+      final hasScope =
+          await _googleSignIn.canAccessScopes([_calendarScope]);
+
+      if (!hasScope) {
+        final granted =
+            await _googleSignIn.requestScopes([_calendarScope]);
+        if (!granted) {
+          debugPrint('Calendar scope not granted by user.');
+          return null;
+        }
+      }
+    }
+
+    return account.authHeaders;
+  }
+
+  // ─── Internal: unified sign-in for mobile + web ───────────────────────
+
+  static Future<GoogleSignInAccount?> _ensureSignedIn(
+      BuildContext context) async {
+    final silent = await _googleSignIn.signInSilently();
+    if (silent != null) return silent;
+
+    if (kIsWeb) {
+      return _showWebSignInDialog(context);
+    }
+
+    return _googleSignIn.signIn();
+  }
+
+  static Future<GoogleSignInAccount?> _showWebSignInDialog(
+      BuildContext context) async {
+    final completer = Completer<GoogleSignInAccount?>();
+
+    final sub = _googleSignIn.onCurrentUserChanged.listen((account) {
+      if (account != null && !completer.isCompleted) {
+        completer.complete(account);
+      }
+    });
+
+    if (!context.mounted) {
+      await sub.cancel();
+      return null;
+    }
+
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+          title: const Text('Connect Google Calendar'),
+          content: SizedBox(
+            width: 280,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Sign in with Google to sync this appointment to your calendar.',
+                  style:
+                      TextStyle(fontSize: 14, color: Color(0xFF475569)),
+                ),
+                const SizedBox(height: 20),
+                buildWebSignInButton(_googleSignIn),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                if (!completer.isCompleted) completer.complete(null);
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      ).then((_) {
+        if (!completer.isCompleted) completer.complete(null);
+      }),
+    );
+
+    final account = await completer.future.timeout(
+      const Duration(minutes: 2),
+      onTimeout: () => null,
+    );
+
+    await sub.cancel();
+
+    if (context.mounted) {
+      final navigator = Navigator.of(context, rootNavigator: true);
+      if (navigator.canPop()) navigator.pop();
+    }
+
+    return account;
+  }
+
+  // ─── Create ───────────────────────────────────────────────────────────
+
   static Future<String?> syncAppointment({
+    required BuildContext context,
     required String title,
     required String description,
     required DateTime startTime,
     Duration duration = const Duration(hours: 1),
   }) async {
     try {
-      final account = await _googleSignIn.signIn();
+      final account = await _ensureSignedIn(context);
       if (account == null) return null;
 
-      final authHeaders = await account.authHeaders;
+      // ← get OAuth2 access token (not just ID token)
+      final authHeaders = await _getAuthHeaders(account);
+      if (authHeaders == null) return null;
+
       final client = _AuthenticatedClient(http.Client(), authHeaders);
       final calendarApi = gcal.CalendarApi(client);
 
@@ -42,7 +162,8 @@ class GoogleCalendarService {
           ],
         );
 
-      final createdEvent = await calendarApi.events.insert(event, 'primary');
+      final createdEvent =
+          await calendarApi.events.insert(event, 'primary');
       client.close();
       return createdEvent.id;
     } catch (e) {
@@ -50,6 +171,8 @@ class GoogleCalendarService {
       return null;
     }
   }
+
+  // ─── Update ───────────────────────────────────────────────────────────
 
   static Future<String?> updateEvent({
     required String googleEventId,
@@ -62,7 +185,10 @@ class GoogleCalendarService {
       final account = await _googleSignIn.signInSilently();
       if (account == null) return null;
 
-      final authHeaders = await account.authHeaders;
+      // ← get OAuth2 access token
+      final authHeaders = await _getAuthHeaders(account);
+      if (authHeaders == null) return null;
+
       final client = _AuthenticatedClient(http.Client(), authHeaders);
       final calendarApi = gcal.CalendarApi(client);
 
@@ -90,9 +216,11 @@ class GoogleCalendarService {
         client.close();
         return googleEventId;
       } catch (e) {
-        if (e.toString().contains('404') || e.toString().contains('notFound')) {
-          debugPrint('Event not found on Google Calendar. Re-creating event.');
-          final createdEvent = await calendarApi.events.insert(event, 'primary');
+        if (e.toString().contains('404') ||
+            e.toString().contains('notFound')) {
+          debugPrint('Event not found. Re-creating.');
+          final createdEvent =
+              await calendarApi.events.insert(event, 'primary');
           client.close();
           return createdEvent.id;
         }
@@ -104,12 +232,17 @@ class GoogleCalendarService {
     }
   }
 
+  // ─── Delete ───────────────────────────────────────────────────────────
+
   static Future<bool> deleteEvent(String googleEventId) async {
     try {
       final account = await _googleSignIn.signInSilently();
       if (account == null) return false;
 
-      final authHeaders = await account.authHeaders;
+      // ← get OAuth2 access token
+      final authHeaders = await _getAuthHeaders(account);
+      if (authHeaders == null) return false;
+
       final client = _AuthenticatedClient(http.Client(), authHeaders);
       final calendarApi = gcal.CalendarApi(client);
 
@@ -118,7 +251,8 @@ class GoogleCalendarService {
       return true;
     } catch (e) {
       debugPrint('Google Calendar delete failed: $e');
-      if (e.toString().contains('404') || e.toString().contains('notFound')) {
+      if (e.toString().contains('404') ||
+          e.toString().contains('notFound')) {
         return true;
       }
       return false;

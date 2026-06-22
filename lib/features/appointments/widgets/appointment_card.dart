@@ -80,6 +80,7 @@ class AppointmentCard extends StatelessWidget {
       );
     } else {
       eventId = await GoogleCalendarService.syncAppointment(
+        context: context,
         title: appointment.title,
         description: description,
         startTime: appointment.appointmentDateTime,
